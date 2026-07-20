@@ -1,0 +1,23 @@
+{
+  "no_verifier": {
+    "n": 72,
+    "task_success_rate": 0.6111111111111112,
+    "executed_flawed_rate": 0.3888888888888889,
+    "replans": 0,
+    "rejected_after_replan": 0
+  },
+  "hybrid_gated": {
+    "n": 72,
+    "task_success_rate": 0.9305555555555556,
+    "executed_flawed_rate": 0.0,
+    "replans": 31,
+    "rejected_after_replan": 5
+  },
+  "llm_judge_cot_gated": {
+    "n": 72,
+    "task_success_rate": 0.875,
+    "executed_flawed_rate": 0.0,
+    "replans": 28,
+    "rejected_after_replan": 9
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "symbolic_only": {
+    "api_calls_per_plan": 0,
+    "local_seconds_per_plan": 1.5420009731315075e-07
+  },
+  "hybrid": {
+    "api_calls_per_plan": "k*steps extraction (~12-24, cacheable/batchable)",
+    "local_seconds_per_plan": 0.0002144958001736086
+  },
+  "llm_judge_zeroshot": {
+    "api_calls_per_plan": 1,
+    "note": "up to ~2048 output tokens (haiku simulates the plan even without a CoT instruction; tighter budgets truncate the verdict line \u2014 see LIMITATIONS.md)"
+  },
+  "llm_judge_cot": {
+    "api_calls_per_plan": 1,
+    "note": "up to ~2048 output tokens"
+  },
+  "self_repair": {
+    "api_calls_per_plan": 1,
+    "note": "critique + rewritten plan"
+  }
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "domain": "blocksworld",
+    "flawed_n": 12,
+    "flawed_fixed_by_repair": 9,
+    "valid_n": 4,
+    "valid_broken_by_repair": 0
+  },
+  {
+    "domain": "logistics",
+    "flawed_n": 1,
+    "flawed_fixed_by_repair": 1,
+    "valid_n": 23,
+    "valid_broken_by_repair": 0
+  },
+  {
+    "domain": "tools",
+    "flawed_n": 15,
+    "flawed_fixed_by_repair": 13,
+    "valid_n": 17,
+    "valid_broken_by_repair": 0
+  }
+]
