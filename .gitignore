@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+.env
+
+# uv
+uv.lock.tmp
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Generated datasets — keep small fixtures tracked
+verifier/data/*
+!verifier/data/fixtures/
+!verifier/data/fixtures/**
