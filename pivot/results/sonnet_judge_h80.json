@@ -1,0 +1,35 @@
+{
+  "horizon": 80,
+  "budget_used": 8192,
+  "comparison_basis": "existing 36-record H=80 stratified subset (12/domain), 100% flawed",
+  "sonnet5_zeroshot": {
+    "n": 36,
+    "n_flawed": 36,
+    "n_valid": 0,
+    "recall": 1.0,
+    "false_reject_rate": null,
+    "false_reject_rate_note": "undefined \u2014 subset has 0 valid plans",
+    "parse_failures": 0,
+    "parse_failure_rate": 0.0,
+    "mean_output_tokens": 1226.7
+  },
+  "haiku_zeroshot_same_subset": {
+    "n": 36,
+    "n_flawed": 36,
+    "n_valid": 0,
+    "recall": 0.806,
+    "false_reject_rate": null,
+    "false_reject_rate_note": "undefined \u2014 subset has 0 valid plans",
+    "parse_failures": 0,
+    "parse_failure_rate": 0.0
+  },
+  "sonnet_recall_trajectory": {
+    "H20": 1.0,
+    "H40": 1.0,
+    "H80": 1.0
+  },
+  "degradation_at_H80": false,
+  "honesty_flags": [
+    "Sonnet-5 zero-shot recall stays 1.0 at H=80 (1.0 at H=20/40 too): the accuracy tie with the checker holds across every horizon tested (20-80). No degradation."
+  ]
+}

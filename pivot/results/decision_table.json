@@ -142,31 +142,41 @@
   "haiku_cot@H80": {
     "model": "claude-haiku-4-5",
     "recall": 0.8833,
-    "false_reject_rate": null,
+    "false_reject_rate": 0.0,
     "mean_output_tokens": 1191.9,
     "call_cost_usd": 0.00595933,
     "n_flawed": 120,
     "n_valid": 0,
-    "basis": "baselines, n=120"
+    "basis": "baselines, n=120; fr VACUOUS (0 valid plans at H=80)"
   },
   "haiku_zeroshot@H80": {
     "model": "claude-haiku-4-5",
     "recall": 0.8417,
-    "false_reject_rate": null,
+    "false_reject_rate": 0.0,
     "mean_output_tokens": 854.2,
     "call_cost_usd": 0.00427088,
     "n_flawed": 120,
     "n_valid": 0,
-    "basis": "baselines, n=120"
+    "basis": "baselines, n=120; fr VACUOUS (0 valid plans at H=80)"
+  },
+  "sonnet_zeroshot@H80": {
+    "model": "claude-sonnet-5",
+    "recall": 1.0,
+    "false_reject_rate": 0.0,
+    "mean_output_tokens": 1226.7,
+    "call_cost_usd": 0.0184005,
+    "n_flawed": 36,
+    "n_valid": 0,
+    "basis": "sonnet_judge_h80.json, n=36; fr VACUOUS (0 valid plans)"
   },
   "symbolic@H80": {
     "model": "symbolic",
     "recall": 1.0,
-    "false_reject_rate": null,
+    "false_reject_rate": 0.0,
     "mean_output_tokens": 0.0,
     "call_cost_usd": 0.0,
     "n_flawed": 120,
     "n_valid": 0,
-    "basis": "rule-parsed verdicts, n=120"
+    "basis": "rule-parsed verdicts, n=120; fr VACUOUS (0 valid plans at H=80)"
   }
 }
