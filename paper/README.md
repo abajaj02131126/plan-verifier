@@ -1,27 +1,24 @@
-# Paper folder — Overleaf-ready
+# Paper folder — Overleaf-ready, official AAAI 2027 format
 
 Upload the contents of this folder (or a zip of it) to a new Overleaf
 project and it compiles as-is with pdfLaTeX:
 
-- `main.tex` — the manuscript (set as the main document; Overleaf picks it
-  up automatically)
-- `references.bib` — bibliography (plainnat/natbib)
+- `main.tex` — the manuscript, using the official AAAI 2027 author kit
+- `aaai2027.sty`, `aaai2027.bst` — the AAAI 2027 style files (unmodified)
+- `references.bib` — bibliography (author-year, AAAI format)
 - `figures/` — PNG figures copied from `../results/figures/`; re-copy after
   regenerating results (`cp ../results/figures/*.png figures/`)
 
-`main.pdf` is a prebuilt copy for viewing; Overleaf regenerates it and does
-not need it uploaded.
+`main.pdf` is a prebuilt copy for viewing; Overleaf regenerates it.
 
-For actual AAAI submission: download the AAAI author kit, replace the
-preamble (documentclass through the custom formatting packages) with
-`\usepackage{aaai26}` per the kit's template, switch the bibliography style
-as the kit requires, and anonymize the author block. The body, tables,
-figures, and references port unchanged.
+For the anonymous review upload, change the style line in `main.tex` to
+`\usepackage[submission]{aaai2027}` — the option hides the author block
+automatically. Section numbering is enabled via `\setcounter{secnumdepth}{2}`
+(the kit permits it; the paper cross-references sections).
 
-Local build (BasicTeX at /Library/TeX/texbin):
+Local build (BasicTeX at /Library/TeX/texbin; missing packages were
+installed user-mode via
+`tlmgr --usermode install newtx placeins txfonts courier helvetic times
+xstring kastrup fontaxes xkeyval etoolbox tex-gyre`):
 
     pdflatex main && bibtex main && pdflatex main && pdflatex main
-
-Note: `main.tex` sets `\ttdefault` to Computer Modern because BasicTeX
-lacks Courier metrics; on Overleaf (full TeX Live) you can delete that line
-to get standard Times+Courier.

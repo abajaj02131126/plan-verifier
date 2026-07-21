@@ -1,33 +1,30 @@
-% Pre-submission draft. Formatted to approximate the AAAI two-column camera
-% style with standard LaTeX (BasicTeX-compatible). For actual submission,
-% port the body onto the official AAAI author kit style file (aaai26.sty) —
-% section content is written to fit the 8-page limit there.
-\documentclass[10pt,twocolumn]{article}
-
-\usepackage[letterpaper,margin=0.75in,top=0.9in,bottom=1in,columnsep=0.25in]{geometry}
-\usepackage{times}
-% BasicTeX lacks Courier metrics; keep Computer Modern for monospace.
-\renewcommand{\ttdefault}{cmtt}
-\usepackage{microtype}
+% AAAI 2027 author-kit format. For the anonymous review upload, change the
+% package line to \usepackage[submission]{aaai2027} (authors auto-hidden).
+\documentclass[letterpaper]{article}
+\usepackage{aaai2027}          % official AAAI 2027 style (do not modify)
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{caption}
-\usepackage[numbers]{natbib}
-\usepackage[hidelinks]{hyperref}
+\usepackage{natbib}            % aaai2027.sty sets the aaai2027 bst itself
+\frenchspacing
+
+% AAAI defaults to unnumbered sections (secnumdepth 0); numbering is
+% permitted and this paper cross-references sections, so re-enable it.
+\setcounter{secnumdepth}{2}
 
 % Figures are copied into paper/figures/ (from results/figures/) so this
 % folder is self-contained for Overleaf; re-copy after regenerating results.
 \graphicspath{{figures/}}
-\captionsetup{font=small,labelfont=bf}
-\setlength{\bibsep}{2pt}
 
-\title{\LARGE\bf Verify Before You Execute: A Hybrid Symbolic--Learned\\
+\pdfinfo{
+/TemplateVersion (2027.1)
+}
+
+\title{Verify Before You Execute: A Hybrid Symbolic--Learned\\
 Pre-Execution Verifier for LLM-Generated Plans}
-\author{Ari Bajaj\\
-Illinois Mathematics and Science Academy\\
-\texttt{abajaj1@imsa.edu}}
-\date{}
+\author{Ari Bajaj}
+\affiliations{Illinois Mathematics and Science Academy\\
+abajaj1@imsa.edu}
 
 \begin{document}
 \maketitle
@@ -359,7 +356,7 @@ removing symbolic grounding; judge bars are at ceiling at this plan length.}
 \begin{table}[t]
 \centering
 \small
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{lcccc}
 \toprule
 Arm & Success & Flawed exec. & Replans & Dead ends \\
@@ -468,7 +465,6 @@ figure in this paper from fixed seeds (\texttt{make reproduce FULL=1} for
 the full-scale configuration). Datasets are synthesized locally; the only
 external dependency is an Anthropic API key.
 
-\bibliographystyle{plainnat}
 \bibliography{references}
 
 \end{document}
