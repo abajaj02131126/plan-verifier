@@ -219,7 +219,11 @@ Fusion is a two-clause rule with a tested invariant:
 \]
 where the first clause is unconditional---no trust score can rescue a hard
 symbolic failure---and $\tau$ is picked on validation. $\tau{=}0$ recovers
-symbolic-only exactly.
+symbolic-only exactly. We describe this component in full for
+reproducibility, but---previewing Section~\ref{sec:trustresult}---it is
+evaluated as a \emph{negative result}: at our data scale the learned layer
+never beneficially changes a decision, under either of two calibration
+methods.
 
 \section{Experimental Setup}
 
@@ -347,17 +351,22 @@ Table~\ref{tab:main} contains a result we report at full prominence:
 \textbf{both LLM judges are perfect on this test split}. Plans of 3--8
 steps are short enough for the judge model to simulate flawlessly when
 given an adequate token budget (see Section~\ref{sec:budget}). At this
-horizon, ``hybrid beats LLM-judge on detection'' is \emph{not supported}
-by Table~\ref{tab:main} alone---but Section~\ref{sec:horizon} shows this
-parity is a short-horizon artifact that does not survive longer plans. The
-learned-only ablation (F1 0.677) confirms the symbolic grounding carries
+horizon ``the checker beats an LLM judge on detection'' is simply
+\emph{false}: a well-budgeted judge ties it. This is where we first
+expected longer plans to separate the two on accuracy---
+Section~\ref{sec:horizon} tests that and finds it holds only for a weaker
+judge, not a stronger one, which is what redirects the paper's claim away
+from accuracy and toward cost and soundness. The learned-only ablation
+(F1 0.677) confirms the symbolic grounding, not the learned layer, carries
 the detection signal.
 
-The hybrid's only errors are 3 false rejects, all on the Tools domain
+The checker's only errors here are 3 false rejects, all on the Tools domain
 (precision there 0.833, perfect elsewhere), all with one signature: the
 extractor mangles hyphenated arguments (\texttt{flights-scope} $\to$
 \texttt{flights}), producing unknown-object violations on genuinely valid
-plans.
+plans---the same extraction noise that gives the checker its nonzero
+false-reject rate at $H{=}5$ in the decision model
+(Section~\ref{sec:decision}).
 
 \subsection{Judge Degradation with Horizon Is Model-Specific, Not a
 Property of Judging}
@@ -594,10 +603,12 @@ The Reflexion-style repairer is a surprisingly strong \emph{fixer}---23/28
 flawed plans repaired, 0/44 valid plans broken---but an unreliable
 \emph{detector} (change-detection conflates cosmetic rewrites with flaw
 detection). Cost: the symbolic path decides in ${\sim}0.2\,\mu$s locally
-with zero API calls; the hybrid adds $k{\times}$steps extraction calls
-(${\sim}$12--24, batchable); each judge call generates up to 2{,}048
-tokens. A verifier that is free at decision time changes how often one can
-afford to check.
+with zero API calls; the extract-and-check path adds $k{\times}$steps
+extraction calls (${\sim}$12--24, batchable); each judge call generates
+into an 8{,}192-token budget (measured means 500--1{,}500 tokens, rising
+with horizon and higher for the stronger judge). A verifier that is free at
+decision time changes how often one can afford to check---the term the
+decision model prices as $\lambda$.
 
 \subsection{Generality: the Tool-Use Domain}
 \label{sec:tools}
@@ -624,8 +635,13 @@ horizon at $H{\in}\{40,80\}$ (wide error bars there), one model family
 long-horizon gold plans are valid but not optimal
 (Section~\ref{sec:horizonsetup}), so ``horizon $H$'' is a nominal band, not
 an optimality claim, and the downstream soundness-gap result
-(Section~\ref{sec:horizon}) is demonstrated only at $H{\leq}20$, not yet at
-$H{=}40,80$ where the recall trend suggests it would be larger. The trust
+(Section~\ref{sec:horizon}) is demonstrated only at $H{\leq}20$ with the
+Haiku judge, where its recall trend suggests the gap would grow---a
+projection that does \emph{not} transfer to a stronger judge. The
+Sonnet-5 transfer check is itself narrow: zero-shot only, three horizons,
+12-record-per-domain subsets at $H{=}40,80$, and a single strong model; the
+accuracy tie could break for a different model, for CoT, or at larger $n$,
+and we claim only what those points show. The trust
 layer's value proposition is confined to the prose regime by construction
 (Section~\ref{sec:prose}); the paraphrase step can itself add label noise
 (all systems see identical text, so comparisons stay like-for-like). The
