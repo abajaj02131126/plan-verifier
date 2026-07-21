@@ -31,36 +31,31 @@ abajaj1@imsa.edu}
 
 \begin{abstract}
 LLM agents increasingly emit multi-step plans---action sequences, tool-call
-chains---that downstream systems execute directly. Executing a flawed plan is
-costly, yet the dominant safeguards are either an LLM judging its own kind or
-no check at all. We present a pre-execution verifier that translates a
-free-text plan into a typed action schema, \emph{soundly} checks consistency,
-goal completeness, and resource feasibility by forward simulation, and fuses
-the symbolic verdict with a small calibrated \emph{trust model} that estimates
-whether the NL$\to$schema translation itself was faithful. Hard symbolic
-failures always reject; the trust score ranks residual translation risk. On
-three domains (Blocksworld, Logistics, and a tool-use environment that reused
-the pipeline with zero code changes), against oracle labels validated by two
-independent simulators agreeing on 360/360 records, the hybrid attains
-F1$=$0.949 at perfect recall and---most importantly---raises downstream
-execute-or-reject task success from 61.1\% (no verifier) to 93.1\%, beating an
-LLM-judge gate (87.5\%) because its symbolic explanations make replanning
-feedback actionable. At the plan lengths typical of prior LLM-planning
-benchmarks (3--8 steps), properly-budgeted LLM judges are in fact
-\emph{perfect} detectors, matching the hybrid. We therefore run a
-second experiment scaling plan length to 10/20/40/80 steps and find the
-picture reverses: the hybrid holds F1$=$1.000 at every horizon while judge
-recall degrades monotonically (0.94$\to$0.84 zero-shot, 0.92$\to$0.88
-chain-of-thought), and in a live downstream execute-or-reject test at
-10--20 steps the judge-gated arm lets 4--5\% of flawed plans execute while
-the hybrid remains at exactly 0\% at every horizon tested---the one
-guarantee sound simulation gives that judging cannot. We also report two
-further negative-space findings: a constrained output format makes the
-NL$\to$schema translation lossless, eliminating the trust model's target
-class in that regime; and a naive token budget silently turned a fail-open
-judge baseline into ``no verifier'' on 100\% of records, a deployment
-failure mode worth naming on its own. Code, data generators, and all
-results are reproducible from a single make target on a laptop.
+chains---that downstream systems execute directly, where a flawed plan is
+paid for at execution time. We present a pre-execution verifier that
+translates a free-text plan into a typed action schema and \emph{soundly}
+checks consistency, goal completeness, and resource feasibility by forward
+simulation. We initially hypothesized that its advantage over an LLM ``plan
+judge'' was accuracy that widens with plan length---and with a small model
+(Claude Haiku) as judge, judge recall did fall from 0.94 to 0.84 as plans
+grew from 10 to 80 steps while the checker held recall 1.0. \textbf{A
+stronger judge overturned that explanation:} Claude Sonnet~5, given the
+identical prompt and token budget, scored recall 1.0 at 20, 40, and 80 steps
+alike---no degradation. Horizon-driven judge degradation is thus a
+property of weaker judges, not of judging. What survives is a sharper,
+correct claim, which we state as a proposition and prove from the
+expected-cost model: whenever a judge merely \emph{matches} the checker's
+accuracy, the checker is still expected-cost-optimal because it is sound at
+\emph{zero} marginal decision-time cost---dominance by cost and guarantee,
+not by accuracy. Empirically the checker is expected-cost-optimal across the
+entire (stakes, cost-weight) grid at every horizon $\ge 10$; at 3--8 steps,
+where extraction noise gives the checker a small false-reject rate, a cheap
+accurate judge can instead be optimal---so the boundary is horizon- and
+cost-dependent, which we map. We also give the deployment argument that does
+not depend on model tier at all: the checker is structurally immune to the
+silent guardrail-collapse modes we document, in which a fail-open LLM judge
+with a too-small token budget accepted 100\% of flawed plans while appearing
+to run. All results are reproducible from a single make target on a laptop.
 \end{abstract}
 
 \section{Introduction}
@@ -84,40 +79,48 @@ unmodeled failure source. Purely learned safeguards---asking an LLM judge
 they are meant to check, and recent evidence suggests LLMs are poor
 self-verifiers \citep{huang2024cannot,stechly2024selfverification}.
 
-We study the middle: a \textbf{hybrid pre-execution verifier} for LLM plans.
-An LLM extractor translates each free-text step into a typed action schema; a
-sound symbolic checker forward-simulates the extracted plan and verdicts
-three independent dimensions (action consistency, goal completeness, resource
-feasibility); and a small calibrated \emph{trust model}---trained on
-extraction confidence, $k$-resample self-consistency agreement, and
-plan-shape features---estimates the probability that the symbolic verdict is
-\emph{faithful} to the plan as written, i.e.\ that the translation did not
-silently change what is being checked. The fusion rule is asymmetric by
-design: a hard symbolic failure always rejects, regardless of trust; among
-symbolic passes, low trust flags residual risk.
+We study the middle: an LLM extractor translates each free-text step into a
+typed action schema, and a sound symbolic checker forward-simulates the
+extracted plan and verdicts three independent dimensions (action
+consistency, goal completeness, resource feasibility). The question this
+paper actually answers is not ``does this beat an LLM judge on accuracy''
+but \emph{when} a sound-but-narrow checker is the better verification
+strategy than an approximate-but-general judge---a decision-theoretic
+question in the stakes of a missed flaw, the cost of an unnecessary replan,
+and the dollar cost of a judge call.
+
+\paragraph{An honest reversal.} Our first hypothesis was that the checker's
+edge is accuracy that grows with plan length. With Claude Haiku as the
+judge, the data seemed to confirm it (judge recall $0.94\!\to\!0.84$ over
+$10\!\to\!80$ steps; checker $1.0$ throughout). Re-running the identical
+experiment with a stronger judge, Claude Sonnet~5, refuted the
+explanation: Sonnet held recall $1.0$ at 20, 40, and 80 steps. The
+degradation was a property of the weaker \emph{judge}, not of judging with
+horizon. We report this in full and rebuild the contribution on what
+survives it.
 
 \paragraph{Contributions.}
-(1)~A pipeline architecture and open implementation for sound pre-execution
-verification of free-text LLM plans, with a learned estimate of translation
-faithfulness as a first-class signal. (2)~A synthetic-data methodology with
-an \emph{independent} oracle: two separately implemented simulators (labeler
-and verifier) whose agreement on every record (360/360; 1{,}440/1{,}440
-per-dimension comparisons) anchors all reported numbers. (3)~A generality
+(1)~A sound pre-execution verifier for \emph{free-text} LLM plans, with a
+synthetic-data methodology anchored by an \emph{independent} oracle: two
+separately implemented simulators agree on every record (360/360;
+1{,}440/1{,}440 per-dimension comparisons). (2)~The reversal above, reported
+as a first-class result: horizon-driven judge degradation did not replicate
+for a stronger judge, so we do \emph{not} claim it as a general property of
+judging. (3)~A decision-theoretic account with a proved proposition: when a
+judge only matches the checker's accuracy, the checker is still
+expected-cost-optimal because it is sound at \emph{zero} marginal cost;
+empirically this holds across the whole (stakes, cost-weight) grid at every
+horizon $\ge 10$, while at 3--8 steps a cheap accurate judge can win because
+extraction noise gives the checker a small false-reject rate---a horizon-
+and cost-dependent boundary we map rather than assert. (4)~A generality
 test: a tool-use domain (auth scopes, prerequisite calls, quotas, spend
-budgets) was expressed in the same DSL and ran through the entire pipeline
-with \emph{zero} code changes. (4)~A downstream execute-or-reject experiment
-showing the hybrid's real edge at short horizons is not detection accuracy
-but \emph{replan feedback quality}: symbolic explanations convert
-rejections into successful second attempts more often than judge critiques
-(5 vs.\ 9 dead-ends). (5)~A plan-length scaling experiment (10/20/40/80
-steps) showing that detection accuracy parity is a short-horizon artifact:
-judge recall degrades monotonically with length while sound simulation does
-not, and by 10--20 steps the judge-gated downstream arm already lets
-flawed plans execute at a nonzero rate that the hybrid never does.
-(6)~Several honestly-reported negative and boundary results that reframe
-the design space for verifier research, including a deployment failure
-mode in which a fail-open LLM judge silently degrades to no verification at
-all.
+budgets) ran through the entire pipeline with \emph{zero} code changes.
+(5)~A tier-independent deployment argument: a taxonomy of silent
+guardrail-collapse modes---including a fail-open judge that accepted 100\%
+of flawed plans while appearing to run---to which the checker is
+structurally immune. (6)~A negative result reported as such: a learned
+trust layer over the checker's parse was inert under \emph{two} independent
+calibration methods at our data scale, for a diagnosable reason.
 
 \section{Related Work}
 
@@ -356,56 +359,67 @@ extractor mangles hyphenated arguments (\texttt{flights-scope} $\to$
 \texttt{flights}), producing unknown-object violations on genuinely valid
 plans.
 
-\subsection{Detection Parity Is a Short-Horizon Artifact}
+\subsection{Judge Degradation with Horizon Is Model-Specific, Not a
+Property of Judging}
 \label{sec:horizon}
 
 \begin{table}[t]
 \centering
 \small
 \setlength{\tabcolsep}{4pt}
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \toprule
-Horizon & Hybrid F1 & Judge-zs F1 (R) & Judge-CoT F1 (R) \\
+Horizon & Checker R & Haiku-zs R & Haiku-CoT R & Sonnet-zs R \\
 \midrule
-5 (ref.) & 0.949 & 1.000 (1.00) & 1.000 (1.00) \\
-10 & \textbf{1.000} & 0.967 (0.94) & 0.960 (0.92) \\
-20 & \textbf{1.000} & 0.950 (0.91) & 0.976 (0.95) \\
-40 & \textbf{1.000} & 0.937 (0.88) & 0.962 (0.93) \\
-80 & \textbf{1.000} & 0.914 (0.84) & 0.938 (0.88) \\
+5 (ref.) & 1.00 & 1.00 & 1.00 & --- \\
+10 & \textbf{1.00} & 0.94 & 0.92 & --- \\
+20 & \textbf{1.00} & 0.91 & 0.95 & \textbf{1.00} \\
+40 & \textbf{1.00} & 0.88 & 0.93 & \textbf{1.00} \\
+80 & \textbf{1.00} & 0.84 & 0.88 & \textbf{1.00} \\
 \bottomrule
 \end{tabular}
-\caption{F1 (and recall in parentheses for the judges) vs.\ nominal plan
-horizon, pooled over domains. The hybrid is perfect at every horizon
-$\geq{}$10; judge recall degrades monotonically as plans lengthen.}
+\caption{Flaw-detection recall vs.\ nominal plan horizon, pooled over
+domains. The weak judge (Haiku) degrades monotonically; the \emph{stronger}
+judge (Sonnet-5), under the identical prompt and 8192-token budget, matches
+the checker at recall 1.0 at every horizon tested. Sonnet-5 was run at
+20/40/80 (a targeted transfer check, zero-shot; the 40/80 cells use the
+12-record-per-domain subset).}
 \label{tab:horizon}
 \end{table}
 
-We repeat detection at nominal horizons of 10, 20, 40, and 80 steps
-(Section~\ref{sec:horizonsetup}). Table~\ref{tab:horizon} settles the
-question Section~\ref{sec:trustresult}'s parity result left open: the
-hybrid (identical to symbolic-only at every horizon tested, since
-$\tau{=}0$ throughout) holds F1$=$1.000 and recall$=$1.000 at every horizon
-from 10 to 80 steps---expected, since forward simulation's cost is linear
-in plan length and its correctness does not degrade with length. Both
-judges degrade monotonically in \emph{recall} as horizon grows (zero-shot
-1.00$\to$0.94$\to$0.91$\to$0.88$\to$0.84; CoT 1.00$\to$0.92$\to$0.95$\to$
-0.93$\to$0.88, noisier but the same downward drift,
-Figure~\ref{fig:recall_horizon})---they increasingly fail to \emph{catch}
-flawed plans, not fail to parse: judge mean output tokens rise with horizon
-(zero-shot 634$\to$854, CoT 765$\to$1{,}192 tokens,
-Figure~\ref{fig:judge_tokens}) and 0/480 judge calls were unparseable at
-any horizon, so this is a genuine simulation-accuracy failure, not a
-formatting artifact. The flaw rate among LLM-generated plans also rises
-sharply with horizon (38.9\% at $H{=}5$ $\to$ 65\% at $H{=}10$ $\to$ 87.5\%
-at $H{=}20$ $\to$ 100\% at $H{=}80$)---longer LLM-generated plans are both
-harder to verify \emph{and} more likely to be flawed, compounding the value
-of a sound checker exactly where judges get worse.
+We repeat detection at nominal horizons of 10--80 steps
+(Section~\ref{sec:horizonsetup}). Our initial reading of Haiku alone
+(Table~\ref{tab:horizon}, columns 2--3; Figure~\ref{fig:recall_horizon})
+was that judging degrades with length: Haiku zero-shot recall falls
+$1.00\!\to\!0.94\!\to\!0.91\!\to\!0.88\!\to\!0.84$ and CoT drifts down
+similarly, and this is a genuine miss-the-flaw failure, not a parsing one
+(0/480 Haiku calls were unparseable and mean output tokens actually
+\emph{rise} with horizon, $634\!\to\!854$ zero-shot). The checker, by
+contrast, holds recall 1.0 everywhere---expected, since forward simulation
+is linear in length and does not lose accuracy.
+
+\textbf{A stronger judge overturns the ``degrades with horizon''
+reading.} Running the identical experiment with Claude Sonnet~5---same
+prompts, same budget---gives recall \textbf{1.0 at 20, 40, and 80 steps}
+(Table~\ref{tab:horizon}, last column), with zero parse failures. The
+degradation is therefore a property of the weaker judge \emph{model}, not of
+judging long plans per se, and we do not claim the general version. This
+matters because it changes what the checker's advantage \emph{is}: not
+higher accuracy than any judge (a strong judge ties it), but the properties
+developed next---sound coverage at zero marginal cost
+(Section~\ref{sec:decision}) and immunity to guardrail collapse
+(Section~\ref{sec:budget}). The flaw rate among generated plans does rise
+with horizon (38.9\% at $H{=}5$ to 100\% at $H{=}80$), so longer plans are
+both more failure-prone and, for a weak judge, harder to check---but that
+last clause is judge-specific.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.95\columnwidth]{recall_vs_horizon.png}
-\caption{Flaw-detection recall vs.\ plan horizon, pooled. The hybrid stays
-at 1.0; both judges drift downward as plans lengthen.}
+\includegraphics[width=0.95\columnwidth]{recall_vs_horizon_sonnet.png}
+\caption{Flaw-detection recall vs.\ plan horizon, pooled. The checker stays
+at 1.0; the weak judge (Haiku) drifts downward, but the stronger judge
+(Sonnet-5) also stays at 1.0 at every horizon it was tested---so the
+downward drift is Haiku-specific.}
 \label{fig:recall_horizon}
 \end{figure}
 
@@ -414,12 +428,14 @@ downstream execute-or-reject experiment (Section~\ref{sec:downstream}) at
 $H{\in}\{10,20\}$ (120 records each; $H{=}40,80$ were not affordable to run
 downstream given the recall trend already visible at $H{\leq}20$). At
 $H{=}5$ both gates achieved 0\% executed-flawed. At $H{=}10$ the
-judge-gated arm lets \textbf{5\%} of records execute a flawed plan despite
-the gate; at $H{=}20$, \textbf{4.2\%}. The hybrid-gated arm remains at
-\textbf{exactly 0\%} executed-flawed at both horizons---the one guarantee
-sound simulation gives that judging cannot, and the guarantee actually
-degrades under exactly the conditions (longer, more complex, more
-failure-prone plans) where a verifier is needed most. Task success falls
+judge-gated arm (Haiku CoT, the pipeline's judge) lets \textbf{5\%} of
+records execute a flawed plan despite the gate; at $H{=}20$, \textbf{4.2\%}.
+The checker-gated arm remains at \textbf{exactly 0\%} executed-flawed at both
+horizons. This is the crucial asymmetry: a sound gate \emph{cannot} leak a
+flawed plan by construction, whereas any approximate gate can, and here does.
+A stronger judge would leak less (Section~\ref{sec:horizon}), but ``less''
+is not ``never''---only soundness gives never, at zero marginal cost. Task
+success falls
 for every arm as horizon grows (the underlying planner LLM struggles at
 10--20 steps, independent of verification), but the hybrid still leads at
 both horizons (0.667 vs.\ 0.525 at $H{=}10$; 0.383 vs.\ 0.283 at $H{=}20$).
@@ -436,22 +452,75 @@ compute on longer plans yet still miss more flaws (Table~\ref{tab:horizon}).}
 \label{fig:judge_tokens}
 \end{figure}
 
-\subsection{The Trust Signal Points the Right Way---but the Fusion Rule
-Cannot Use It}
+\subsection{Decision-Theoretic Account: When the Checker Wins}
+\label{sec:decision}
+
+If a strong judge matches the checker's accuracy, what makes the checker the
+better \emph{choice}? We answer with an expected-cost model over three
+measured quantities per strategy at a horizon: its miss rate $1-\text{recall}$
+(each miss costs the stakes $S$ of executing a flawed plan), its
+false-reject rate (each costs a replan $r$), and its real per-record dollar
+call cost (weighted by $\lambda$, converting dollars into the same units):
+\[
+\text{cost} = (1-\text{recall})\,S + \text{fr}\cdot r + \text{call\_cost}\cdot\lambda .
+\]
+The checker's call cost is $0$ (no API call at decision time); a judge's is
+its measured token cost times list price.
+
+\paragraph{Proposition.} \emph{At a horizon where a judge tier and the
+checker both have recall $1$ and false-reject rate $0$, and the checker's
+call cost is $0$ while the judge's is $c>0$, then
+$\text{cost}_\text{checker} \le \text{cost}_\text{judge}$ for all
+$S,r,\lambda\ge 0$, with equality iff $\lambda=0$.} The proof is immediate:
+under the shared premises both the $S$ and $r$ terms vanish for both
+strategies, leaving $0 \le c\lambda$. The entire gap is the judge's
+per-call cost; stakes and replan cost drop out.
+
+Empirically this is exactly what the measured grid shows. Sweeping
+$S\in[1,200]$ and $\lambda\in[0.01,100]$, the checker is expected-cost-
+optimal in \textbf{all} $3600/3600$ cells at $H{=}20$, $40$, and $80$---the
+regime where Sonnet-5 meets the premises---tying only on the $\lambda{=}0$
+edge. The proposition is deliberately \emph{conditional}: it does not claim
+universal dominance, and it correctly predicts its own boundary. At
+$H{=}5$, LLM-extraction noise gives the checker a nonzero false-reject rate
+($0.068$, three hyphenated-argument tool plans) so the premise fails; there
+the cheap, accurate Haiku zero-shot judge is optimal in $3060/3600$ cells,
+and the checker wins only the high-$\lambda$ strip where dollar cost
+dominates. The decision is thus genuinely horizon- and cost-dependent, and
+the model maps where each strategy wins rather than asserting one always
+does.
+
+\subsection{Negative Result: the Learned Trust Layer Is Inert Under Two
+Independent Calibration Methods}
 \label{sec:trustresult}
 
-The validation-picked threshold is $\tau{=}0$: the trust layer never
-changes a decision at dev scale, and the test split contains zero
-symbolically-clean-but-flawed records for it to catch (41 symbolic passes,
-all genuinely valid). Yet the signal itself is demonstrably real: the three
-false-rejected mistranslations receive the trust model's \emph{lowest}
-scores in the entire test split (0.74--0.82, vs.\ $>$0.9 elsewhere;
-classifier accuracy 0.958, ECE 0.067, Figure~\ref{fig:reliability}). The
-model detects unfaithful translation exactly as designed---but our fusion
-rule, like prior gate-then-execute designs, only lets trust \emph{add}
-rejections. A bidirectional rule (low-trust symbolic reject $\to$
-re-extract, or fall back to the rule parser) would have repaired all three
-errors and is the concrete architectural lesson of this study.
+We tested a learned trust layer over the checker's parse---predicting
+whether the NL$\to$schema translation was faithful---two independent ways,
+and it was inert both times at our data scale. We report both, with numbers.
+
+\emph{Method 1 (Platt-scaled threshold).} A calibrated logistic model
+(accuracy 0.958, ECE 0.067, Figure~\ref{fig:reliability}) does rank the
+signal correctly---the three false-rejected mistranslations get its
+\emph{lowest} scores (0.74--0.82 vs.\ $>$0.9 elsewhere). But the
+validation-picked operating threshold is $\tau{=}0$: the layer never changes
+a decision, because the test split contains zero symbolically-clean-but-
+flawed records for it to catch (41 symbolic passes, all genuinely valid).
+
+\emph{Method 2 (split conformal).} Replacing the ad hoc threshold with a
+distribution-free conformal gate does not rescue it, and the reason is
+diagnosable. There are only 13 unfaithful-translation records total
+(5~calibration / 3~test after the problem-level split). At the standard
+miscoverage $\alpha{=}0.1$ the conformal threshold is \emph{vacuous}
+($\tau{=}1.0$, flag everything): a 90\% distribution-free guarantee is
+simply unreachable from 5~calibration positives except by rejecting all
+records. At the tightest \emph{non}-vacuous level, $\alpha{\approx}0.167$
+(guaranteed coverage $5/6$), the gate flags zero symbolic-pass records and
+again changes nothing; realized test coverage is $3/3$ but with a
+Clopper--Pearson 95\% interval of $[0.29,1.0]$ on three points. Net: zero
+beneficial decision flips under either method. The binding limitation is the
+calibration-set size, not the calibration method---a concrete
+methodological finding about how many labeled positives split conformal
+needs before it can say anything (here, far more than 5).
 
 \begin{figure}[t]
 \centering
@@ -576,26 +645,36 @@ reliable with plan length.
 
 \section{Conclusion}
 
-We built and honestly evaluated a hybrid pre-execution verifier for
-free-text LLM plans. At short horizons (3--8 steps, the range typical of
-prior LLM-planning benchmarks) its detection matches a sound symbolic check
-and is beaten to ceiling by a well-budgeted LLM judge---but even there it
-wins where execution happens: the highest downstream task success (93.1\%)
-and replan feedback that turns rejections into successes more often. That
-short-horizon parity, however, does not survive scale: at 10--80 steps the
-hybrid remains perfect while judge recall degrades monotonically, and by
-10--20 steps the judge-gated downstream arm already lets flawed plans
-execute at a nonzero rate the hybrid never does. Four findings reframe the
-design space: sound verification is a length-invariant guarantee that LLM
-judging is not, and the gap opens exactly where plans get harder and more
-error-prone; constrained formats make translation lossless (making the
-trust problem vanish where they are available); trust signals should flow
-\emph{both} ways through the fusion rule, triggering re-extraction rather
-than only extra rejection; and fail-open judge deployments can silently
-become no verifier at all. The obvious next step is to push the downstream
-soundness-gap measurement to 40--80 steps and to real (non-synthetic)
-long-horizon planning tasks, where we expect the gap this laptop-scale
-infrastructure surfaced to widen further.
+We built a sound pre-execution verifier for free-text LLM plans and, in
+evaluating it, corrected our own central hypothesis in public. We expected
+its edge over an LLM judge to be accuracy that widens with plan length; that
+held for a weak judge (Claude Haiku, recall $0.94\!\to\!0.84$ over
+$10\!\to\!80$ steps) but was overturned by a strong one (Claude Sonnet~5,
+recall $1.0$ at 20, 40, and 80 steps under the identical prompt and budget).
+Horizon-driven judge degradation is a property of the judge model, not of
+judging, and we do not claim otherwise.
+
+What survives is sharper. When a judge only \emph{matches} the checker's
+accuracy, the checker is still the expected-cost-optimal verification
+strategy, because it is sound at zero marginal decision-time cost---a
+dominance we prove as a proposition and confirm across the whole
+(stakes, cost-weight) grid at every horizon $\ge 10$. The boundary is real,
+not universal: at 3--8 steps, where extraction noise gives the checker a
+small false-reject rate, a cheap accurate judge can instead be optimal, and
+we map exactly where. And the argument that needs no model comparison at
+all: the checker is structurally immune to the silent guardrail-collapse
+modes we document---no token budget to truncate, a total deterministic
+verdict, fail-closed by construction---whereas a fail-open judge with a
+too-small budget accepted 100\% of flawed plans while appearing to run.
+
+We also report what did \emph{not} work: a learned trust layer over the
+checker's parse was inert under two independent calibration methods
+(Platt-scaled and split-conformal), the binding limit being a
+13-example unfaithful-translation set---too few for a distribution-free
+guarantee to say anything. The next steps are a bidirectional fusion rule
+(letting low trust trigger re-extraction rather than only extra rejection),
+a larger calibration set, and pushing the whole comparison onto real,
+non-synthetic long-horizon planning tasks.
 
 \section*{Reproducibility}
 
