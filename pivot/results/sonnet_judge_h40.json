@@ -1,0 +1,31 @@
+{
+  "horizon": 40,
+  "budget_used": 8192,
+  "comparison_basis": "same 36-record stratified subset (12/domain)",
+  "sonnet5_zeroshot": {
+    "n": 36,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "parse_failures": 0,
+    "mean_output_tokens": 888.0
+  },
+  "haiku_zeroshot_same_subset": {
+    "n": 36,
+    "precision": 1.0,
+    "recall": 0.824,
+    "f1": 0.903,
+    "parse_failures": 0,
+    "mean_output_tokens": 734.4
+  },
+  "haiku_zeroshot_full_120_table2_context": {
+    "n": 120,
+    "precision": 1.0,
+    "recall": 0.882,
+    "f1": 0.937
+  },
+  "recall_delta_sonnet_minus_haiku_same_subset": 0.176,
+  "honesty_flags": [
+    "Sonnet-5 zero-shot recall at H=40 is 1.0 (near-perfect) on the same 36 records where Haiku scores 0.824. Combined with the H=20 point (Sonnet 1.0), Sonnet-5 shows NO horizon degradation at either tested point \u2014 the degradation is Haiku-specific (model-strength), not a horizon-structural property. First-class finding; do not soften."
+  ]
+}
