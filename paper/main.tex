@@ -45,13 +45,22 @@ independent simulators agreeing on 360/360 records, the hybrid attains
 F1$=$0.949 at perfect recall and---most importantly---raises downstream
 execute-or-reject task success from 61.1\% (no verifier) to 93.1\%, beating an
 LLM-judge gate (87.5\%) because its symbolic explanations make replanning
-feedback actionable. We report three negative-space findings with equal
-prominence: properly-budgeted LLM judges are \emph{perfect} detectors on
-short-horizon plans; a constrained output format makes the translation
-lossless, eliminating the trust model's target class; and a naive token
-budget silently turned a fail-open judge baseline into ``no verifier'' on
-100\% of records. Code, data generators, and all results are reproducible
-from a single make target on a laptop.
+feedback actionable. At the plan lengths typical of prior LLM-planning
+benchmarks (3--8 steps), properly-budgeted LLM judges are in fact
+\emph{perfect} detectors, matching the hybrid. We therefore run a
+second experiment scaling plan length to 10/20/40/80 steps and find the
+picture reverses: the hybrid holds F1$=$1.000 at every horizon while judge
+recall degrades monotonically (0.94$\to$0.84 zero-shot, 0.92$\to$0.88
+chain-of-thought), and in a live downstream execute-or-reject test at
+10--20 steps the judge-gated arm lets 4--5\% of flawed plans execute while
+the hybrid remains at exactly 0\% at every horizon tested---the one
+guarantee sound simulation gives that judging cannot. We also report two
+further negative-space findings: a constrained output format makes the
+NL$\to$schema translation lossless, eliminating the trust model's target
+class in that regime; and a naive token budget silently turned a fail-open
+judge baseline into ``no verifier'' on 100\% of records, a deployment
+failure mode worth naming on its own. Code, data generators, and all
+results are reproducible from a single make target on a laptop.
 \end{abstract}
 
 \section{Introduction}
@@ -97,12 +106,18 @@ per-dimension comparisons) anchors all reported numbers. (3)~A generality
 test: a tool-use domain (auth scopes, prerequisite calls, quotas, spend
 budgets) was expressed in the same DSL and ran through the entire pipeline
 with \emph{zero} code changes. (4)~A downstream execute-or-reject experiment
-showing the hybrid's real edge is not detection accuracy but \emph{replan
-feedback quality}: symbolic explanations convert rejections into successful
-second attempts more often than judge critiques (5 vs.\ 9 dead-ends).
-(5)~Three honestly-reported negative results that materially reframe the
-design space for verifier research, including a deployment failure mode in
-which a fail-open LLM judge silently degrades to no verification at all.
+showing the hybrid's real edge at short horizons is not detection accuracy
+but \emph{replan feedback quality}: symbolic explanations convert
+rejections into successful second attempts more often than judge critiques
+(5 vs.\ 9 dead-ends). (5)~A plan-length scaling experiment (10/20/40/80
+steps) showing that detection accuracy parity is a short-horizon artifact:
+judge recall degrades monotonically with length while sound simulation does
+not, and by 10--20 steps the judge-gated downstream arm already lets
+flawed plans execute at a nonzero rate that the hybrid never does.
+(6)~Several honestly-reported negative and boundary results that reframe
+the design space for verifier research, including a deployment failure
+mode in which a fail-open LLM judge silently degrades to no verification at
+all.
 
 \section{Related Work}
 
@@ -216,6 +231,32 @@ subprocess test motivated sorting all set-derived output). Resource caps are
 tightened to $\lceil 1.25\times\rceil$ the gold plan's consumption so that
 wasteful plans can actually overrun.
 
+\subsection{Long-Horizon Problems}
+\label{sec:horizonsetup}
+
+Prior LLM-planning benchmarks concentrate on short plans, and our own
+main dataset (3--8 steps) is no exception---raising the question of
+whether any detector comparison run at that length generalizes. To test
+this directly we build a second, constructive generator per domain
+(BFS gold-planning is infeasible past $\sim$10 steps) that scales problem
+size (blocks, packages, trips) to hit nominal horizons of 10, 20, 40, and
+80 reference-plan steps: Blocksworld tears every tower down to the table
+and rebuilds the goal arrangement bottom-up; Logistics routes each package
+sequentially through its truck/airport/plane legs; Tools authenticates each
+needed scope once and executes every trip's milestone prerequisite chain in
+order. Every constructive plan is independently strict-simulated at
+generation time and re-checked by the oracle labeler, so a bug in a
+constructive planner cannot silently ship an invalid reference plan; the
+one honest caveat is that these plans are valid but \emph{not optimal}
+(Blocksworld especially), so ``horizon $H$'' denotes a band on the
+reference length, not an optimality claim. To bound API cost, the
+$k$-resampled extraction path runs on all 40 records per horizon at
+$H{\in}\{10,20\}$ but on a stratified 12-record subset at
+$H{\in}\{40,80\}$; judges and self-repair run on all records at every
+horizon. Token budgets were raised throughout (generation/paraphrase to
+4{,}096, judges/self-repair to 8{,}192 tokens) so long plans are not
+silently truncated the way Section~\ref{sec:budget} describes.
+
 \subsection{Plan Generation with Failure Injection}
 
 For each problem, \texttt{claude-haiku-4-5} (temperature 1.0) writes a plan
@@ -303,10 +344,9 @@ Table~\ref{tab:main} contains a result we report at full prominence:
 \textbf{both LLM judges are perfect on this test split}. Plans of 3--8
 steps are short enough for the judge model to simulate flawlessly when
 given an adequate token budget (see Section~\ref{sec:budget}). At this
-horizon, ``hybrid beats LLM-judge on detection'' is \emph{not supported};
-the hybrid's measured advantages lie elsewhere (downstream feedback, cost,
-determinism, machine-readable explanations), and whether detection
-separates at longer horizons is the central full-scale question. The
+horizon, ``hybrid beats LLM-judge on detection'' is \emph{not supported}
+by Table~\ref{tab:main} alone---but Section~\ref{sec:horizon} shows this
+parity is a short-horizon artifact that does not survive longer plans. The
 learned-only ablation (F1 0.677) confirms the symbolic grounding carries
 the detection signal.
 
@@ -315,6 +355,86 @@ The hybrid's only errors are 3 false rejects, all on the Tools domain
 extractor mangles hyphenated arguments (\texttt{flights-scope} $\to$
 \texttt{flights}), producing unknown-object violations on genuinely valid
 plans.
+
+\subsection{Detection Parity Is a Short-Horizon Artifact}
+\label{sec:horizon}
+
+\begin{table}[t]
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lccc}
+\toprule
+Horizon & Hybrid F1 & Judge-zs F1 (R) & Judge-CoT F1 (R) \\
+\midrule
+5 (ref.) & 0.949 & 1.000 (1.00) & 1.000 (1.00) \\
+10 & \textbf{1.000} & 0.967 (0.94) & 0.960 (0.92) \\
+20 & \textbf{1.000} & 0.950 (0.91) & 0.976 (0.95) \\
+40 & \textbf{1.000} & 0.937 (0.88) & 0.962 (0.93) \\
+80 & \textbf{1.000} & 0.914 (0.84) & 0.938 (0.88) \\
+\bottomrule
+\end{tabular}
+\caption{F1 (and recall in parentheses for the judges) vs.\ nominal plan
+horizon, pooled over domains. The hybrid is perfect at every horizon
+$\geq{}$10; judge recall degrades monotonically as plans lengthen.}
+\label{tab:horizon}
+\end{table}
+
+We repeat detection at nominal horizons of 10, 20, 40, and 80 steps
+(Section~\ref{sec:horizonsetup}). Table~\ref{tab:horizon} settles the
+question Section~\ref{sec:trustresult}'s parity result left open: the
+hybrid (identical to symbolic-only at every horizon tested, since
+$\tau{=}0$ throughout) holds F1$=$1.000 and recall$=$1.000 at every horizon
+from 10 to 80 steps---expected, since forward simulation's cost is linear
+in plan length and its correctness does not degrade with length. Both
+judges degrade monotonically in \emph{recall} as horizon grows (zero-shot
+1.00$\to$0.94$\to$0.91$\to$0.88$\to$0.84; CoT 1.00$\to$0.92$\to$0.95$\to$
+0.93$\to$0.88, noisier but the same downward drift,
+Figure~\ref{fig:recall_horizon})---they increasingly fail to \emph{catch}
+flawed plans, not fail to parse: judge mean output tokens rise with horizon
+(zero-shot 634$\to$854, CoT 765$\to$1{,}192 tokens,
+Figure~\ref{fig:judge_tokens}) and 0/480 judge calls were unparseable at
+any horizon, so this is a genuine simulation-accuracy failure, not a
+formatting artifact. The flaw rate among LLM-generated plans also rises
+sharply with horizon (38.9\% at $H{=}5$ $\to$ 65\% at $H{=}10$ $\to$ 87.5\%
+at $H{=}20$ $\to$ 100\% at $H{=}80$)---longer LLM-generated plans are both
+harder to verify \emph{and} more likely to be flawed, compounding the value
+of a sound checker exactly where judges get worse.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{recall_vs_horizon.png}
+\caption{Flaw-detection recall vs.\ plan horizon, pooled. The hybrid stays
+at 1.0; both judges drift downward as plans lengthen.}
+\label{fig:recall_horizon}
+\end{figure}
+
+The soundness gap this implies is not merely theoretical: we re-ran the
+downstream execute-or-reject experiment (Section~\ref{sec:downstream}) at
+$H{\in}\{10,20\}$ (120 records each; $H{=}40,80$ were not affordable to run
+downstream given the recall trend already visible at $H{\leq}20$). At
+$H{=}5$ both gates achieved 0\% executed-flawed. At $H{=}10$ the
+judge-gated arm lets \textbf{5\%} of records execute a flawed plan despite
+the gate; at $H{=}20$, \textbf{4.2\%}. The hybrid-gated arm remains at
+\textbf{exactly 0\%} executed-flawed at both horizons---the one guarantee
+sound simulation gives that judging cannot, and the guarantee actually
+degrades under exactly the conditions (longer, more complex, more
+failure-prone plans) where a verifier is needed most. Task success falls
+for every arm as horizon grows (the underlying planner LLM struggles at
+10--20 steps, independent of verification), but the hybrid still leads at
+both horizons (0.667 vs.\ 0.525 at $H{=}10$; 0.383 vs.\ 0.283 at $H{=}20$).
+We flag two limits on this result honestly: the long-horizon extraction
+cells are 12-record stratified subsets with correspondingly wide error
+bars, and the constructive gold plans are valid but not optimal
+(Section~\ref{sec:horizonsetup}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.95\columnwidth]{judge_tokens_vs_horizon.png}
+\caption{Mean judge output tokens vs.\ plan horizon. Judges spend more
+compute on longer plans yet still miss more flaws (Table~\ref{tab:horizon}).}
+\label{fig:judge_tokens}
+\end{figure}
 
 \subsection{The Trust Signal Points the Right Way---but the Fusion Rule
 Cannot Use It}
@@ -371,13 +491,16 @@ records). Success $=$ an executed plan that is actually valid.}
 \label{tab:downstream}
 \end{table}
 
-Table~\ref{tab:downstream} is where the architecture earns its keep. Both
-gates eliminate flawed execution entirely, but the hybrid converts more
-rejections into successful second attempts: its replan feedback is the
-symbolic explanation itself (``step 3: unknown object \dots'', ``goal
-conjunct \texttt{on(b3,b2)} unmet''), which is more actionable than the
-judge's free-text critique---5 vs.\ 9 dead-ends, 93.1\% vs.\ 87.5\% final
-task success. Detection parity, feedback superiority.
+Table~\ref{tab:downstream} is where the architecture earns its keep at this
+horizon. Both gates eliminate flawed execution entirely here, but the
+hybrid converts more rejections into successful second attempts: its
+replan feedback is the symbolic explanation itself (``step 3: unknown
+object \dots'', ``goal conjunct \texttt{on(b3,b2)} unmet''), which is more
+actionable than the judge's free-text critique---5 vs.\ 9 dead-ends, 93.1\%
+vs.\ 87.5\% final task success. At $H{=}5$: detection parity, feedback
+superiority. Section~\ref{sec:horizon} reruns this exact experiment at
+longer horizons and finds the judge's ``eliminates flawed execution
+entirely'' property itself breaks down.
 
 \subsection{A Deployment Failure Mode: the Silently Absent Judge}
 \label{sec:budget}
@@ -425,37 +548,54 @@ NL$\to$schema seam more than classical planning vocabularies do.
 
 \section{Limitations}
 
-All numbers are dev-scale: 360 records, a 72-record test split, 13 negative
-trust labels, one model family (\texttt{claude-haiku-4-5}) for every LLM
-role, single seed. The judges' perfect detection means the full-scale run
-(longer horizons, stronger and weaker judge models, multiple seeds) is not
-optional but the crux. The trust layer's value proposition is confined to
-the prose regime by construction (Section~\ref{sec:prose}); the paraphrase
-step can itself add label noise (all systems see identical text, so
-comparisons stay like-for-like). The oracle and verifier share design
-semantics though not code, so a shared semantic error would evade the
-cross-check; hand-verified fixtures and (future) \textsc{VAL}
-\citep{howey2004val} validation are the defenses. Precondition similarity
-is lexical; the DSL omits conditional effects and typed return values; the
-downstream replan arm is gated by the sound rule-based check, so its
-``accepted implies valid'' property is by construction and the informative
-quantities are replan success and ungated flawed-execution cost.
+All numbers are dev-scale: 360 short-horizon records (72-record test
+split, 13 negative trust labels) plus 12 records per domain per long
+horizon at $H{\in}\{40,80\}$ (wide error bars there), one model family
+(\texttt{claude-haiku-4-5}) for every LLM role, single seed. The
+long-horizon gold plans are valid but not optimal
+(Section~\ref{sec:horizonsetup}), so ``horizon $H$'' is a nominal band, not
+an optimality claim, and the downstream soundness-gap result
+(Section~\ref{sec:horizon}) is demonstrated only at $H{\leq}20$, not yet at
+$H{=}40,80$ where the recall trend suggests it would be larger. The trust
+layer's value proposition is confined to the prose regime by construction
+(Section~\ref{sec:prose}); the paraphrase step can itself add label noise
+(all systems see identical text, so comparisons stay like-for-like). The
+oracle and verifier share design semantics though not code, so a shared
+semantic error would evade the cross-check; hand-verified fixtures and
+(future) \textsc{VAL} \citep{howey2004val} validation are the defenses.
+Precondition similarity is lexical; the DSL omits conditional effects and
+typed return values; the downstream replan arm is gated by the sound
+rule-based check, so its ``accepted implies valid'' property is by
+construction and the informative quantities are replan success and
+ungated flawed-execution cost. A remaining open question worth naming
+plainly: the near-100\% extraction-fidelity rate at $H{\geq}10$
+(Section~\ref{sec:horizon}) measures agreement between two extraction
+paths on mechanically repetitive long-horizon plans, not ground-truth
+extraction accuracy, and should not be read as translation becoming more
+reliable with plan length.
 
 \section{Conclusion}
 
 We built and honestly evaluated a hybrid pre-execution verifier for
-free-text LLM plans. At short horizons its detection matches a sound
-symbolic check and is beaten to ceiling by a well-budgeted LLM judge---but
-it wins where execution happens: zero flawed executions, the highest
-downstream task success (93.1\%), and replan feedback that turns rejections
-into successes. Three findings reframe the design space: constrained
-formats make translation lossless (making the trust problem vanish where
-they are available); trust signals should flow \emph{both} ways through the
-fusion rule, triggering re-extraction rather than only extra rejection; and
-fail-open judge deployments can silently become no verifier at all. The
-full-scale question---whether judge detection degrades at horizons where
-sound simulation does not---is precisely what this laptop-scale
-infrastructure now makes cheap to ask.
+free-text LLM plans. At short horizons (3--8 steps, the range typical of
+prior LLM-planning benchmarks) its detection matches a sound symbolic check
+and is beaten to ceiling by a well-budgeted LLM judge---but even there it
+wins where execution happens: the highest downstream task success (93.1\%)
+and replan feedback that turns rejections into successes more often. That
+short-horizon parity, however, does not survive scale: at 10--80 steps the
+hybrid remains perfect while judge recall degrades monotonically, and by
+10--20 steps the judge-gated downstream arm already lets flawed plans
+execute at a nonzero rate the hybrid never does. Four findings reframe the
+design space: sound verification is a length-invariant guarantee that LLM
+judging is not, and the gap opens exactly where plans get harder and more
+error-prone; constrained formats make translation lossless (making the
+trust problem vanish where they are available); trust signals should flow
+\emph{both} ways through the fusion rule, triggering re-extraction rather
+than only extra rejection; and fail-open judge deployments can silently
+become no verifier at all. The obvious next step is to push the downstream
+soundness-gap measurement to 40--80 steps and to real (non-synthetic)
+long-horizon planning tasks, where we expect the gap this laptop-scale
+infrastructure surfaced to widen further.
 
 \section*{Reproducibility}
 

@@ -1,0 +1,57 @@
+{
+  "5": {
+    "n_judge_records": 72,
+    "n_extraction_records": 72,
+    "flaw_rate": 0.389,
+    "judge_zs_unparseable": 0,
+    "judge_cot_unparseable": 0,
+    "judge_zs_mean_output_tokens": null,
+    "judge_cot_mean_output_tokens": null,
+    "extraction_faithful_rate": 0.9583,
+    "mean_llm_plan_len": null
+  },
+  "10": {
+    "n_judge_records": 120,
+    "n_extraction_records": 120,
+    "flaw_rate": 0.65,
+    "judge_zs_unparseable": 0,
+    "judge_cot_unparseable": 0,
+    "judge_zs_mean_output_tokens": 634.4,
+    "judge_cot_mean_output_tokens": 764.6,
+    "extraction_faithful_rate": 1.0,
+    "mean_llm_plan_len": 9.0
+  },
+  "20": {
+    "n_judge_records": 120,
+    "n_extraction_records": 120,
+    "flaw_rate": 0.875,
+    "judge_zs_unparseable": 0,
+    "judge_cot_unparseable": 0,
+    "judge_zs_mean_output_tokens": 646.5,
+    "judge_cot_mean_output_tokens": 822.1,
+    "extraction_faithful_rate": 1.0,
+    "mean_llm_plan_len": 18.5
+  },
+  "40": {
+    "n_judge_records": 120,
+    "n_extraction_records": 36,
+    "flaw_rate": 0.917,
+    "judge_zs_unparseable": 0,
+    "judge_cot_unparseable": 0,
+    "judge_zs_mean_output_tokens": 799.2,
+    "judge_cot_mean_output_tokens": 933.4,
+    "extraction_faithful_rate": 1.0,
+    "mean_llm_plan_len": 36.1
+  },
+  "80": {
+    "n_judge_records": 120,
+    "n_extraction_records": 36,
+    "flaw_rate": 1.0,
+    "judge_zs_unparseable": 0,
+    "judge_cot_unparseable": 0,
+    "judge_zs_mean_output_tokens": 854.2,
+    "judge_cot_mean_output_tokens": 1191.9,
+    "extraction_faithful_rate": 1.0,
+    "mean_llm_plan_len": 61.8
+  }
+}

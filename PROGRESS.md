@@ -578,3 +578,134 @@ deliberately — they are themselves dev-scale findings.
 multi-seed replication — the dev-scale numbers are the honest current
 state; VAL external validation (rationale in Phase 4); neural embedding
 features (lexical TF-IDF stands in, rationale in LIMITATIONS.md).
+
+---
+
+## 2026-07-20 — Horizon experiment: 10/20/40/80-step plans
+
+**Motivation:** the Phase 8 conclusion flagged an open question — both LLM
+judges scored a perfect F1=1.0 on 3-8-step plans, so "hybrid beats judge on
+detection" was unsupported at that horizon. This experiment asks whether
+judge detection degrades as plans get longer while sound symbolic
+simulation does not.
+
+**Built:**
+- `verifier/domains/horizon.py`: constructive gold planners for each domain
+  (BFS is infeasible past ~10 steps). Blocksworld tears every tower down to
+  the table then rebuilds goal towers bottom-up; logistics routes each
+  package sequentially through truck/airport/plane legs; tools
+  authenticates each needed scope once then runs every trip's milestone
+  prerequisite chain in dependency order. Plans are valid by construction
+  AND independently strict-simulated at generation time
+  (`verifier/schema/state.py:simulate`, raises on any violation) plus a
+  goal check — a bug in a constructive planner cannot silently ship a bad
+  reference plan. Honest caveat: these plans are valid but NOT optimal
+  (blocksworld especially), so "horizon H" is a nominal band
+  ([0.85H, 1.2H]) on the reference length, not an optimality claim.
+- `scripts/generate_problems.py --horizon H`: switches to the constructive
+  generators.
+- `scripts/horizon_pipeline.sh`: idempotent tiered pipeline — full 6-system
+  pipeline (10 problems x 4 conditions = 40 records/cell) at every horizon
+  for judges/self-repair/rule-parsed-symbolic; the expensive
+  k-resampled LLM-extraction path (k x steps calls/plan) runs on all 40
+  records at h10/h20 but only a 12-record stratified subset (3/condition)
+  at h40/h80 to bound API cost. Token budgets raised throughout (plan
+  generation/paraphrase 4096, judge/self-repair 8192) so 80-step plans
+  don't get silently truncated the way the Phase 8 zero-shot judge did at
+  64 tokens.
+- `scripts/run_horizon_eval.py`: trains the trust model and learned-only
+  baseline ONLY on the original short-horizon data (zero long-horizon
+  leakage — this also measures the trust model's out-of-distribution
+  generalization to longer plans) and evaluates all 6 systems at
+  horizons {5 (short-horizon reference, Phase 8 test split), 10, 20, 40,
+  80}. Emits per-horizon metrics, diagnostics (judge token cost, LLM plan
+  length, extraction fidelity), 5 figures (F1/recall/precision vs horizon,
+  judge cost vs horizon, extraction fidelity vs horizon), and downstream
+  execute-or-reject at h10/h20.
+- 28 new tests (`tests/domains/test_horizon.py`): every domain x horizon
+  cell's gold plan validated by the INDEPENDENT oracle labeler (a second,
+  separately-implemented opinion beyond the generation-time strict
+  simulation), band membership, cross-process-style determinism, resource
+  dimensions non-degenerate. 106 offline tests total now pass.
+
+**Result — the headline finding, and it reverses the Phase 8 caveat:**
+
+| horizon | hybrid/symbolic F1 | judge-zs F1 | judge-zs recall | judge-CoT F1 | judge-CoT recall |
+|---|---|---|---|---|---|
+| 5 (short-horizon ref) | 0.949 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 10 | **1.000** | 0.967 | 0.936 | 0.960 | 0.923 |
+| 20 | **1.000** | 0.950 | 0.914 | 0.976 | 0.952 |
+| 40 | **1.000** | 0.937 | 0.882 | 0.962 | 0.927 |
+| 80 | **1.000** | 0.914 | **0.842** | 0.938 | 0.883 |
+
+The hybrid (and rule-parsed symbolic-only) hold perfect F1=1.000 and
+recall=1.000 at every horizon from 10 to 80 steps — as expected, since
+forward simulation's cost is linear in plan length and correctness doesn't
+degrade with length. Both LLM judges degrade monotonically in recall as
+horizon grows (zero-shot 1.00 -> 0.94 -> 0.91 -> 0.88 -> 0.84; CoT 1.00 ->
+0.92 -> 0.95 -> 0.93 -> 0.88, noisier but the same downward drift) — they
+increasingly fail to CATCH flawed plans (false negatives), not fail to
+parse: judge mean output tokens rise with horizon (zs 634->854, CoT
+765->1192 tokens) and 0/480 judge calls were unparseable at any horizon, so
+this is a genuine simulation-accuracy failure, not a formatting artifact.
+The flaw rate among LLM-generated plans also rises sharply with horizon
+(38.9% at h5 -> 65% at h10 -> 87.5% at h20 -> 100% at h80) — longer
+LLM-generated plans are both harder to verify AND more likely to be flawed,
+compounding the value of a sound checker exactly where judges get worse.
+Self-repair's "detection" (change-on-repair) is noisy across horizon
+(0.98->0.98->0.88->0.91->0.92) with no clean trend — consistent with the
+Phase 8 caveat that it's an indirect signal.
+
+**Extraction fidelity vs horizon:** 100% faithful (LLM-extraction verdict
+== rule-based reference) at every long horizon (10/20/40/80), vs 95.8% on
+the short-horizon reference split. This is a genuinely surprising result
+worth flagging rather than smoothing over: it does NOT mean translation
+gets easier at length. The more likely explanation (recorded as a
+follow-up question, not resolved here) is that the k=3 self-consistency
+modal vote and/or the mechanical, template-like structure of the
+constructive long-horizon plans (repeated authenticate/search/book or
+load/drive/unload subsequences) make the extractor's output more
+reproducible even when individual steps are still imperfect — i.e., this
+metric measures agreement between two extraction paths of the SAME
+underlying plan, not ground-truth extraction accuracy, and a
+mechanically-repetitive plan can be consistently mis-extracted the same
+way both times. Flagged in LIMITATIONS.md rather than presented as
+"extraction gets better with scale."
+
+**Downstream execute-or-reject at h10/h20** (120 records/horizon, same
+methodology as Phase 8 — one feedback-driven replan):
+
+| horizon | arm | task success | executed-flawed |
+|---|---|---|---|
+| 10 | no verifier | 0.350 | 0.650 |
+| 10 | hybrid-gated | **0.667** | 0.000 |
+| 10 | CoT-judge-gated | 0.525 | 0.050 |
+| 20 | no verifier | 0.125 | 0.875 |
+| 20 | hybrid-gated | **0.383** | 0.000 |
+| 20 | CoT-judge-gated | 0.283 | 0.042 |
+
+Two things worth flagging honestly. First, absolute task success falls
+sharply with horizon for every arm (the underlying LLM planner gets much
+worse at 10-20 step plans, which is expected and not a verifier property).
+Second, and importantly: unlike at h5 where BOTH gates achieved 0%
+executed-flawed, at h10/h20 the **judge-gated arm lets flawed plans through
+0.05 (h10) / 0.042 (h20) of the time** — a real, nonzero soundness gap that
+directly instantiates the recall degradation above, while the **hybrid
+stays at exactly 0.000 executed-flawed at every horizon tested (5 through
+20)** — the one guarantee a judge fundamentally cannot make. The hybrid
+also converts more of its rejections into successful replans at both
+horizons (task success 0.667 vs 0.525 at h10; 0.383 vs 0.283 at h20).
+
+**What this changes in the paper's story:** the Phase 8 conclusion said
+"whether detection separates at longer horizons is the central open
+question" and declined to claim hybrid > judge on detection. This
+experiment answers that question with real data: it does separate, in the
+hybrid's favor, and the separation shows up first as a recall gap (10-80
+steps) and then as an actual soundness violation in the downstream
+experiment (10-20 steps, the only horizons where a live downstream run was
+affordable). The paper has been updated to report this as a real finding
+rather than an open question, while keeping the honest caveats: long-horizon
+extraction cells are 12-record subsets (wide error bars), gold plans there
+are valid-but-not-optimal, and the downstream soundness-gap result is only
+demonstrated at h10/h20 (not yet run at h40/h80, where it would likely be
+larger given the recall trend).

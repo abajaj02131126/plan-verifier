@@ -58,6 +58,21 @@ flagged at the point of use in PROGRESS.md.
   generation/paraphrase/self-repair budgets raised accordingly) so that
   80-step simulation is not budget-truncated; short- vs long-horizon judge
   comparisons therefore use different budgets than the original dev run.
+- **The 100% extraction-fidelity rate at h10-80 should not be read as
+  "translation gets more reliable with plan length."** It measures
+  agreement between the LLM-extraction verdict and a rule-based reference
+  verdict of the SAME plan, not ground-truth extraction accuracy against
+  human judgment. The long-horizon constructive plans are mechanically
+  repetitive (the same authenticate/search/book or load/drive/unload
+  subsequence repeated many times), which plausibly makes the k=3
+  self-consistency vote more reproducible even if individual steps are
+  still imperfectly extracted — a consistent mis-extraction would still
+  register as "faithful" here. Unresolved; noted as a question for
+  follow-up rather than a finding.
+- **The h10/h20 downstream soundness-gap result (judge-gated arm lets
+  0.05/0.042 of plans execute flawed) is not yet demonstrated at h40/h80**,
+  where the judge recall trend suggests it would be larger; running it
+  there was deferred for API cost.
 
 ## Architecture & features
 

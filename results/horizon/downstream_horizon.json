@@ -1,0 +1,48 @@
+{
+  "10": {
+    "no_verifier": {
+      "n": 120,
+      "task_success_rate": 0.35,
+      "executed_flawed_rate": 0.65,
+      "replans": 0,
+      "rejected_after_replan": 0
+    },
+    "hybrid_gated": {
+      "n": 120,
+      "task_success_rate": 0.6666666666666666,
+      "executed_flawed_rate": 0.0,
+      "replans": 78,
+      "rejected_after_replan": 40
+    },
+    "llm_judge_cot_gated": {
+      "n": 120,
+      "task_success_rate": 0.525,
+      "executed_flawed_rate": 0.05,
+      "replans": 72,
+      "rejected_after_replan": 51
+    }
+  },
+  "20": {
+    "no_verifier": {
+      "n": 120,
+      "task_success_rate": 0.125,
+      "executed_flawed_rate": 0.875,
+      "replans": 0,
+      "rejected_after_replan": 0
+    },
+    "hybrid_gated": {
+      "n": 120,
+      "task_success_rate": 0.38333333333333336,
+      "executed_flawed_rate": 0.0,
+      "replans": 105,
+      "rejected_after_replan": 74
+    },
+    "llm_judge_cot_gated": {
+      "n": 120,
+      "task_success_rate": 0.2833333333333333,
+      "executed_flawed_rate": 0.041666666666666664,
+      "replans": 100,
+      "rejected_after_replan": 81
+    }
+  }
+}

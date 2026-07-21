@@ -1,0 +1,189 @@
+{
+  "horizons": [
+    5,
+    10,
+    20,
+    40,
+    80
+  ],
+  "trust_threshold": 0.0,
+  "diagnostics": {
+    "5": {
+      "n_judge_records": 72,
+      "n_extraction_records": 72,
+      "flaw_rate": 0.389,
+      "judge_zs_unparseable": 0,
+      "judge_cot_unparseable": 0,
+      "judge_zs_mean_output_tokens": null,
+      "judge_cot_mean_output_tokens": null,
+      "extraction_faithful_rate": 0.9583,
+      "mean_llm_plan_len": null
+    },
+    "10": {
+      "n_judge_records": 120,
+      "n_extraction_records": 120,
+      "flaw_rate": 0.65,
+      "judge_zs_unparseable": 0,
+      "judge_cot_unparseable": 0,
+      "judge_zs_mean_output_tokens": 634.4,
+      "judge_cot_mean_output_tokens": 764.6,
+      "extraction_faithful_rate": 1.0,
+      "mean_llm_plan_len": 9.0
+    },
+    "20": {
+      "n_judge_records": 120,
+      "n_extraction_records": 120,
+      "flaw_rate": 0.875,
+      "judge_zs_unparseable": 0,
+      "judge_cot_unparseable": 0,
+      "judge_zs_mean_output_tokens": 646.5,
+      "judge_cot_mean_output_tokens": 822.1,
+      "extraction_faithful_rate": 1.0,
+      "mean_llm_plan_len": 18.5
+    },
+    "40": {
+      "n_judge_records": 120,
+      "n_extraction_records": 36,
+      "flaw_rate": 0.917,
+      "judge_zs_unparseable": 0,
+      "judge_cot_unparseable": 0,
+      "judge_zs_mean_output_tokens": 799.2,
+      "judge_cot_mean_output_tokens": 933.4,
+      "extraction_faithful_rate": 1.0,
+      "mean_llm_plan_len": 36.1
+    },
+    "80": {
+      "n_judge_records": 120,
+      "n_extraction_records": 36,
+      "flaw_rate": 1.0,
+      "judge_zs_unparseable": 0,
+      "judge_cot_unparseable": 0,
+      "judge_zs_mean_output_tokens": 854.2,
+      "judge_cot_mean_output_tokens": 1191.9,
+      "extraction_faithful_rate": 1.0,
+      "mean_llm_plan_len": 61.8
+    }
+  },
+  "pooled_f1_by_horizon": {
+    "hybrid": {
+      "5": 0.949,
+      "10": 1.0,
+      "20": 1.0,
+      "40": 1.0,
+      "80": 1.0
+    },
+    "symbolic_extraction": {
+      "5": 0.949,
+      "10": 1.0,
+      "20": 1.0,
+      "40": 1.0,
+      "80": 1.0
+    },
+    "llm_judge_zeroshot": {
+      "5": 1.0,
+      "10": 0.967,
+      "20": 0.95,
+      "40": 0.937,
+      "80": 0.914
+    },
+    "llm_judge_cot": {
+      "5": 1.0,
+      "10": 0.96,
+      "20": 0.976,
+      "40": 0.962,
+      "80": 0.938
+    },
+    "self_repair_detect": {
+      "5": 0.982,
+      "10": 0.981,
+      "20": 0.876,
+      "40": 0.908,
+      "80": 0.919
+    }
+  },
+  "pooled_recall_by_horizon": {
+    "hybrid": {
+      "5": 1.0,
+      "10": 1.0,
+      "20": 1.0,
+      "40": 1.0,
+      "80": 1.0
+    },
+    "symbolic_extraction": {
+      "5": 1.0,
+      "10": 1.0,
+      "20": 1.0,
+      "40": 1.0,
+      "80": 1.0
+    },
+    "llm_judge_zeroshot": {
+      "5": 1.0,
+      "10": 0.936,
+      "20": 0.914,
+      "40": 0.882,
+      "80": 0.842
+    },
+    "llm_judge_cot": {
+      "5": 1.0,
+      "10": 0.923,
+      "20": 0.952,
+      "40": 0.927,
+      "80": 0.883
+    },
+    "self_repair_detect": {
+      "5": 1.0,
+      "10": 0.974,
+      "20": 0.81,
+      "40": 0.855,
+      "80": 0.85
+    }
+  },
+  "downstream": {
+    "10": {
+      "no_verifier": {
+        "n": 120,
+        "task_success_rate": 0.35,
+        "executed_flawed_rate": 0.65,
+        "replans": 0,
+        "rejected_after_replan": 0
+      },
+      "hybrid_gated": {
+        "n": 120,
+        "task_success_rate": 0.6666666666666666,
+        "executed_flawed_rate": 0.0,
+        "replans": 78,
+        "rejected_after_replan": 40
+      },
+      "llm_judge_cot_gated": {
+        "n": 120,
+        "task_success_rate": 0.525,
+        "executed_flawed_rate": 0.05,
+        "replans": 72,
+        "rejected_after_replan": 51
+      }
+    },
+    "20": {
+      "no_verifier": {
+        "n": 120,
+        "task_success_rate": 0.125,
+        "executed_flawed_rate": 0.875,
+        "replans": 0,
+        "rejected_after_replan": 0
+      },
+      "hybrid_gated": {
+        "n": 120,
+        "task_success_rate": 0.38333333333333336,
+        "executed_flawed_rate": 0.0,
+        "replans": 105,
+        "rejected_after_replan": 74
+      },
+      "llm_judge_cot_gated": {
+        "n": 120,
+        "task_success_rate": 0.2833333333333333,
+        "executed_flawed_rate": 0.041666666666666664,
+        "replans": 100,
+        "rejected_after_replan": 81
+      }
+    }
+  }
+}
