@@ -1,0 +1,50 @@
+{
+  "horizon": 20,
+  "n_records_pooled": 120,
+  "budget_used": 8192,
+  "haiku_existing": {
+    "llm_judge_zeroshot": {
+      "n": 120,
+      "precision": 0.99,
+      "recall": 0.914,
+      "f1": 0.95,
+      "mean_output_tokens": 646.5,
+      "parse_failures": 0
+    },
+    "llm_judge_cot": {
+      "n": 120,
+      "precision": 1.0,
+      "recall": 0.952,
+      "f1": 0.976,
+      "mean_output_tokens": 822.1,
+      "parse_failures": 0
+    }
+  },
+  "sonnet5_new": {
+    "model": "claude-sonnet-5",
+    "max_tokens_budget": 8192,
+    "llm_judge_zeroshot": {
+      "n": 120,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "parse_failures": 0,
+      "parse_failure_rate": 0.0,
+      "mean_output_tokens": 692.9
+    },
+    "llm_judge_cot": {
+      "n": 120,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "parse_failures": 0,
+      "parse_failure_rate": 0.0,
+      "mean_output_tokens": 1510.4
+    }
+  },
+  "recall_delta_zeroshot_sonnet_minus_haiku": 0.086,
+  "recall_delta_cot_sonnet_minus_haiku": 0.048,
+  "honesty_flags": [
+    "Sonnet-5 zero-shot recall at H=20 is 1.0 (near-perfect); the horizon degradation does NOT replicate for this stronger model. This WEAKENS the structural-degradation claim and must be reported as-is."
+  ]
+}

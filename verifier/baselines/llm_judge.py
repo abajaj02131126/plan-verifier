@@ -63,6 +63,14 @@ def parse_judge_verdict(text: str) -> Optional[bool]:
     return matches[-1].upper() == "VALID"
 
 
+# Models that reject the `temperature` parameter (deprecated on the newest
+# tiers — Sonnet 5 / Fable 5 / Opus 4.8-family). Added for the pivot's
+# second-judge transfer check (Task 1). The prompt and max_tokens budget are
+# UNCHANGED; only the temperature kwarg is omitted for these models, so the
+# existing haiku-4-5 path is byte-identical and `make reproduce` is unaffected.
+_TEMPERATURE_DEPRECATED_PREFIXES = ("claude-sonnet-5", "claude-fable-5", "claude-mythos-5")
+
+
 def judge_plan(
     client: anthropic.Anthropic,
     problem: Problem,
@@ -71,7 +79,7 @@ def judge_plan(
     model: str = DEFAULT_MODEL,
 ) -> JudgeResult:
     system = "llm_judge_cot" if cot else "llm_judge_zeroshot"
-    response = client.messages.create(
+    kwargs = dict(
         model=model,
         # Both variants get the same generous budget: haiku ignores the
         # zero-shot "exactly one line" instruction and simulates the plan
@@ -81,9 +89,11 @@ def judge_plan(
         # think-step-by-step instruction), not the token budget. 8192 leaves
         # room to simulate 80-step plans in the horizon experiment.
         max_tokens=8192,
-        temperature=0.0,
         messages=[{"role": "user", "content": _judge_prompt(problem, plan_text, cot)}],
     )
+    if not model.startswith(_TEMPERATURE_DEPRECATED_PREFIXES):
+        kwargs["temperature"] = 0.0
+    response = client.messages.create(**kwargs)
     raw = "".join(b.text for b in response.content if b.type == "text")
     return JudgeResult(
         system=system,
