@@ -1,0 +1,83 @@
+{
+  "budget_sweep_observed": [
+    {
+      "budget": 64,
+      "n": 360,
+      "unparseable": 360,
+      "unparse_rate": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    {
+      "budget": 512,
+      "n": 360,
+      "unparseable": 146,
+      "unparse_rate": 0.41,
+      "precision": null,
+      "recall": null,
+      "f1": null,
+      "note": "partial collapse; per-record P/R not separately tabulated in the dev log beyond the unparseable rate"
+    },
+    {
+      "budget": 2048,
+      "n": 360,
+      "unparseable": 0,
+      "unparse_rate": 0.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "note": "adequate budget; judge recovers to perfect at short horizon (3-8 steps)"
+    }
+  ],
+  "taxonomy": [
+    {
+      "category": "truncation-before-verdict",
+      "trigger": "output budget too small for the model's actual verbosity (haiku simulates the plan step-by-step regardless of the 'answer in one line' instruction); observed at 64 and 512 tokens",
+      "observed_effect_on_PR": "unparseable-verdict rate 100% at 64 tokens, ~41% at 512; no exception is raised \u2014 the call 'succeeds' with a truncated body",
+      "deployment_default": "n/a (mechanism); becomes catastrophic or benign depending on the unparseable-handling policy below",
+      "checker_immune": "yes \u2014 the symbolic checker has no generative budget to exhaust"
+    },
+    {
+      "category": "fail-open-on-unparseable-output",
+      "trigger": "any unparseable verdict combined with the naive deployment default of treating 'no parseable verdict' as ACCEPT",
+      "observed_effect_on_PR": "at 64 tokens this turns 100% truncation into P=R=F1=0.0: every flawed plan is accepted and executed, while the guardrail appears to run normally (no errors, fast 'approvals')",
+      "deployment_default": "FAIL-OPEN (observed default). A FAIL-CLOSED default would instead reject all 360 (false-reject storm) \u2014 same bug, opposite failure; either way the judge's verdict is meaningless, just silently",
+      "checker_immune": "yes \u2014 the checker is a total deterministic function; it always emits a parseable verdict and fails CLOSED (an unrunnable step is a violation)"
+    }
+  ],
+  "worked_example": {
+    "context": "short-horizon (3-8 step) records, where the 64/512/2048 budget sweep was measured",
+    "formula": "expected_cost = (1-recall)*S + fr*r + call_cost*lambda (Task 3)",
+    "truncated_judge_recall": 0.0,
+    "working_judge_recall": 1.0,
+    "symbolic_recall": 1.0,
+    "by_domain": {
+      "blocksworld": {
+        "stakes_S": 1.0,
+        "apparent_expected_missed_flaw_cost_if_truncation_undetected": 0.0,
+        "true_expected_missed_flaw_cost_per_flawed_plan": 1.0,
+        "hidden_cost_gap": 1.0
+      },
+      "logistics": {
+        "stakes_S": 10.0,
+        "apparent_expected_missed_flaw_cost_if_truncation_undetected": 0.0,
+        "true_expected_missed_flaw_cost_per_flawed_plan": 10.0,
+        "hidden_cost_gap": 10.0
+      },
+      "tools": {
+        "stakes_S": 50.0,
+        "apparent_expected_missed_flaw_cost_if_truncation_undetected": 0.0,
+        "true_expected_missed_flaw_cost_per_flawed_plan": 50.0,
+        "hidden_cost_gap": 50.0
+      }
+    },
+    "reading": "At 64 tokens the guardrail silently has recall 0.0 while returning fast, error-free 'approvals'. A deployer who assumes it works like the 2048-token judge estimates ~0 missed-flaw cost; the true cost is the full stakes S per flawed plan (1, 10, and 50 at the blocksworld/logistics/tools anchors). The hidden gap grows linearly with stakes \u2014 exactly where a guardrail matters most."
+  },
+  "primary_argument": "Because Sonnet-5 matches the checker on accuracy (Task 1/1b), the checker's durable, tier-INDEPENDENT value is that it structurally cannot enter these failure modes: no token budget (immune to truncation), total deterministic verdict (cannot produce unparseable output), fails CLOSED by construction, and zero marginal decision-time cost. These hold regardless of which judge tier a deployer would otherwise trust.",
+  "honesty_flags": [
+    "The 512-token row's per-record P/R was not separately tabulated in the original dev log beyond the 41% unparseable rate; reported as a gap, not back-filled.",
+    "The worked example drops the call_cost*lambda term (H=5 judge token cost was never logged; and it is dominated by the stakes gap anyway). Stated, not hidden.",
+    "Adversarial prompt-injection immunity is claimed for the checker on structural grounds ONLY; it was NOT tested here (scoped out) and is not a row in the observed taxonomy. Listed as a conceptual advantage / follow-up, not an empirical result."
+  ]
+}
