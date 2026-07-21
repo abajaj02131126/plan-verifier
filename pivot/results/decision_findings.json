@@ -1,0 +1,78 @@
+{
+  "symbolic_recall_by_horizon": {
+    "10": 1.0,
+    "20": 1.0,
+    "40": 1.0,
+    "80": 1.0
+  },
+  "symbolic_recall_verified_1.0": true,
+  "dominance": {
+    "H10": [
+      "haiku_zeroshot: recall 0.9359 vs sym 1.0, fr 0.0 vs 0, $cost 3.17e-03 vs 0 -> symbolic WEAKLY DOMINATES",
+      "haiku_cot: recall 0.9231 vs sym 1.0, fr 0.0 vs 0, $cost 3.82e-03 vs 0 -> symbolic WEAKLY DOMINATES"
+    ],
+    "H20": [
+      "haiku_zeroshot: recall 0.9143 vs sym 1.0, fr 0.0667 vs 0, $cost 3.23e-03 vs 0 -> symbolic WEAKLY DOMINATES",
+      "haiku_cot: recall 0.9524 vs sym 1.0, fr 0.0 vs 0, $cost 4.11e-03 vs 0 -> symbolic WEAKLY DOMINATES",
+      "sonnet_zeroshot: recall 1.0 vs sym 1.0, fr 0.0 vs 0, $cost 1.04e-02 vs 0 -> symbolic WEAKLY DOMINATES; ties on accuracy, symbolic wins only via call cost (lam>0)"
+    ],
+    "H40": [
+      "haiku_zeroshot: recall 0.8818 vs sym 1.0, fr 0.0 vs 0, $cost 4.00e-03 vs 0 -> symbolic WEAKLY DOMINATES",
+      "haiku_cot: recall 0.9273 vs sym 1.0, fr 0.0 vs 0, $cost 4.67e-03 vs 0 -> symbolic WEAKLY DOMINATES",
+      "sonnet_zeroshot: recall 1.0 vs sym 1.0, fr 0.0 vs 0, $cost 1.33e-02 vs 0 -> symbolic WEAKLY DOMINATES; ties on accuracy, symbolic wins only via call cost (lam>0)"
+    ],
+    "H80": [
+      "haiku_zeroshot: fr undefined (no valid plans at H=80); recall=0.8417",
+      "haiku_cot: fr undefined (no valid plans at H=80); recall=0.8833"
+    ]
+  },
+  "pareto_by_horizon": {
+    "H20": {
+      "tiers": [
+        "symbolic",
+        "haiku_zeroshot",
+        "haiku_cot",
+        "sonnet_zeroshot"
+      ],
+      "grid_cells_won": {
+        "symbolic": 3600,
+        "haiku_zeroshot": 0,
+        "haiku_cot": 0,
+        "sonnet_zeroshot": 0
+      },
+      "note": "cells where each tier is expected-cost-optimal over the (S in [1,200], lam in [0.01,100]) grid"
+    },
+    "H40": {
+      "tiers": [
+        "symbolic",
+        "haiku_zeroshot",
+        "haiku_cot",
+        "sonnet_zeroshot"
+      ],
+      "grid_cells_won": {
+        "symbolic": 3600,
+        "haiku_zeroshot": 0,
+        "haiku_cot": 0,
+        "sonnet_zeroshot": 0
+      },
+      "note": "cells where each tier is expected-cost-optimal over the (S in [1,200], lam in [0.01,100]) grid"
+    }
+  },
+  "h5_gap": {
+    "symbolic_recall": 1.0,
+    "symbolic_precision": 0.903,
+    "judge_zs_recall": 1.0,
+    "judge_zs_precision": 1.0,
+    "note": "At H=5 the extract+check strategy has precision 0.903 (a small false-reject rate from LLM-extraction noise on hyphenated args), while both judges have recall 1.0 AND precision 1.0. So at H=5 a judge can beat symbolic on the accuracy terms, and whether it wins overall depends on lam via call cost. BUT H=5 judge output-token counts were NOT recorded in the Phase-8 run (output_tokens logging was added later), so call_cost(judge,H=5) is unavailable. We do NOT fabricate it. The H=5 boundary is: symbolic optimal iff lam > fr_symbolic * r / call_cost_judge (unknown RHS denominator). Follow-up (scoped out, new API): re-run H=5 judges logging tokens."
+  },
+  "stakes_pricing_check": {
+    "raw_recall_divergence_horizon": 10,
+    "symbolic_dominant_on_accuracy_alone_at": "H>=10 (recall 1.0, fr 0)",
+    "conclusion": "The 'stakes-pricing moves the boundary earlier' claim does NOT hold in the direction originally hypothesized: at every horizon >=10 the symbolic strategy already dominates every judge tier on recall and false-rejects BEFORE stakes are priced in, so stakes cannot move a crossover earlier (no judge-optimal region exists there). Pricing stakes only sharpens WHY to prefer symbolic (it adds the missed-flaw term on top of an already-winning position). The reframed, data-supported claim: a strong judge (Sonnet-5) matches symbolic on accuracy at H=20/40, but symbolic is still expected-cost-optimal because its call cost is zero -- soundness at zero marginal cost, not accuracy superiority, is the win."
+  },
+  "honesty_flags": [
+    "Sonnet-5 matches symbolic on recall (1.0) at H=20 and H=40; the symbolic advantage in this cost model is ZERO CALL COST + guaranteed soundness, NOT higher accuracy than the strong judge. Do not overclaim accuracy.",
+    "At lambda=0 (dollar cost ignored) Sonnet-5 TIES symbolic at H=20/40; symbolic is not strictly optimal there. Reported, not hidden.",
+    "H=5 judge token cost is unavailable (not logged in Phase-8 run); the one regime where a judge could be cost-optimal (H=5, symbolic fr>0) cannot be fully computed. Not fabricated; flagged as a gap."
+  ]
+}
