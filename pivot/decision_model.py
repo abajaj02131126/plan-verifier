@@ -94,6 +94,8 @@ def build_table() -> dict:
             "claude-haiku-4-5", cot_r, cot_fr, float(np.mean(ct)), nf, nv, f"baselines, n={len(bl)}"
         )
 
+    _build_h5(table)  # Task 6: short-horizon cell, token cost recovered separately
+
     # Sonnet-5 tier: only the two measured points (H=20 full-120, H=40 36-subset).
     s20 = json.load(open(OUT / "sonnet_judge_h20.json"))
     s40 = json.load(open(OUT / "sonnet_judge_h40.json"))
@@ -109,6 +111,40 @@ def build_table() -> dict:
         z40["mean_output_tokens"], None, None, f"sonnet_judge_h40.json, n={z40['n']}, P={z40['precision']}"
     )
     return table
+
+
+def _build_h5(table: dict) -> None:
+    """Task 6: add the H=5 short-horizon cell. Data from the synthetic test
+    split (72 records); judge token cost RECOVERED via pivot.h5_judge_tokens
+    (re-run of only the missing Haiku zs/CoT combos), not estimated. Unlike
+    H>=10, symbolic here has a nonzero false-reject rate (LLM-extraction noise
+    on 3 hyphenated-arg tool plans), while both judges have recall 1.0 fr 0."""
+    from verifier.learned import split_by_problem
+
+    Sy = Path("verifier/data/synthetic")
+    recs = []
+    for d in DOM:
+        bl = {(x["problem_name"], x["condition"]): x for x in (json.loads(l) for l in open(Sy / f"{d}_baselines.jsonl"))}
+        for line in open(Sy / f"{d}_verdicts_llm.jsonl"):
+            r = json.loads(line)
+            r["baselines"] = bl.get((r["problem_name"], r["condition"]), {})
+            recs.append(r)
+    _, _, test = split_by_problem(recs, seed=0)
+
+    sym_r, sym_fr, nf, nv = _recall_fr(test, lambda r: not r["verdict"]["overall_valid"])
+    zs_r, zs_fr, _, _ = _recall_fr(test, lambda r: r["baselines"].get("judge_zeroshot_valid") is False)
+    cot_r, cot_fr, _, _ = _recall_fr(test, lambda r: r["baselines"].get("judge_cot_valid") is False)
+
+    tok = json.load(open(OUT / "h5_judge_tokens.json"))["combos"]
+    table[("symbolic", 5)] = _row("symbolic", sym_r, sym_fr, 0.0, nf, nv, f"synthetic test split, n={len(test)}")
+    table[("haiku_zeroshot", 5)] = _row(
+        "claude-haiku-4-5", zs_r, zs_fr, tok["haiku_zeroshot"]["mean_output_tokens"], nf, nv,
+        f"synthetic test split n={len(test)}; tokens recovered (h5_judge_tokens.json)"
+    )
+    table[("haiku_cot", 5)] = _row(
+        "claude-haiku-4-5", cot_r, cot_fr, tok["haiku_cot"]["mean_output_tokens"], nf, nv,
+        f"synthetic test split n={len(test)}; tokens recovered (h5_judge_tokens.json)"
+    )
 
 
 def _row(model, recall, fr, mean_tokens, nf, nv, basis) -> dict:
@@ -192,7 +228,7 @@ def main() -> int:
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
 
-    for h in [20, 40]:
+    for h in [5, 20, 40]:
         tiers = [("symbolic", h), ("haiku_zeroshot", h), ("haiku_cot", h), ("sonnet_zeroshot", h)]
         tiers = [t for t in tiers if t in table and table[t]["recall"] is not None and table[t]["false_reject_rate"] is not None]
         names = [t[0] for t in tiers]
@@ -259,32 +295,29 @@ def main() -> int:
     fig.savefig(OUT / "figures" / "expected_cost_vs_horizon.svg")
     plt.close(fig)
 
-    # ---- H=5 token-cost gap: symbolic has fr>0 there (extraction noise), judges
-    #      had recall 1.0 fr 0, but H=5 judge token cost was NOT recorded ----
-    import csv
-    h5 = {}
-    with open("results/horizon/horizon_metrics.csv") as f:
-        for row in csv.DictReader(f):
-            if row["horizon"] == "5" and row["domain"] == "ALL":
-                h5[row["system"]] = {"precision": float(row["precision"]), "recall": float(row["recall"])}
-    # symbolic (hybrid) H=5 precision 0.903 -> fr = FP/valid; recover fr from precision
-    # fr = FP/nv; FP = TP*(1-P)/P; TP = recall*nf. Need nf,nv at H=5 (72-rec split).
-    findings["h5_gap"] = {
-        "symbolic_recall": h5.get("hybrid", {}).get("recall"),
-        "symbolic_precision": h5.get("hybrid", {}).get("precision"),
-        "judge_zs_recall": h5.get("llm_judge_zeroshot", {}).get("recall"),
-        "judge_zs_precision": h5.get("llm_judge_zeroshot", {}).get("precision"),
+    # ---- Task 6: H=5 token-cost gap is now CLOSED (tokens recovered by
+    #      re-running only the missing Haiku zs/CoT combos; see
+    #      pivot/h5_judge_tokens.py, 72/72 verdict-match). The H=5 cell is now
+    #      in the table and the Pareto grid above. ----
+    sym5, zs5 = table[("symbolic", 5)], table[("haiku_zeroshot", 5)]
+    h5_pareto = findings["pareto_by_horizon"].get("H5", {}).get("grid_cells_won", {})
+    total_cells = len(STAKES_SWEEP) * len(LAMBDA_SWEEP)
+    findings["h5_gap_RESOLVED"] = {
+        "status": "CLOSED via re-run (no estimate); tokens 72/72 verdict-matched",
+        "symbolic_H5": {"recall": sym5["recall"], "false_reject_rate": sym5["false_reject_rate"], "call_cost": 0.0},
+        "haiku_zeroshot_H5": {"recall": zs5["recall"], "false_reject_rate": zs5["false_reject_rate"], "call_cost_usd": zs5["call_cost_usd"]},
+        "grid_cells_won_H5": h5_pareto,
+        "changes_the_finding": True,
         "note": (
-            "At H=5 the extract+check strategy has precision 0.903 (a small "
-            "false-reject rate from LLM-extraction noise on hyphenated args), "
-            "while both judges have recall 1.0 AND precision 1.0. So at H=5 a "
-            "judge can beat symbolic on the accuracy terms, and whether it wins "
-            "overall depends on lam via call cost. BUT H=5 judge output-token "
-            "counts were NOT recorded in the Phase-8 run (output_tokens logging "
-            "was added later), so call_cost(judge,H=5) is unavailable. We do NOT "
-            "fabricate it. The H=5 boundary is: symbolic optimal iff "
-            "lam > fr_symbolic * r / call_cost_judge (unknown RHS denominator). "
-            "Follow-up (scoped out, new API): re-run H=5 judges logging tokens."
+            f"The finding CHANGES at H=5. Unlike H>=10 (symbolic 3600/3600), at H=5 the "
+            f"symbolic strategy wins only {h5_pareto.get('symbolic', '?')}/{total_cells} cells; the "
+            f"cheap Haiku zero-shot judge wins {h5_pareto.get('haiku_zeroshot', '?')}/{total_cells}. "
+            "Reason: at H=5 LLM-extraction noise gives the symbolic strategy a nonzero "
+            "false-reject rate (0.068, the 3 hyphenated-arg tool plans), while the judge "
+            "has recall 1.0 AND fr 0; the judge's dollar cost is tiny, so it is "
+            "expected-cost-optimal except in the high-lambda strip where call cost "
+            "dominates. So horizon genuinely matters: at short horizon a cheap accurate "
+            "judge can beat the extract+check strategy; at H>=10 the checker dominates."
         ),
     }
 
@@ -320,9 +353,12 @@ def main() -> int:
         "NOT higher accuracy than the strong judge. Do not overclaim accuracy.",
         "At lambda=0 (dollar cost ignored) Sonnet-5 TIES symbolic at H=20/40; "
         "symbolic is not strictly optimal there. Reported, not hidden.",
-        "H=5 judge token cost is unavailable (not logged in Phase-8 run); the one "
-        "regime where a judge could be cost-optimal (H=5, symbolic fr>0) cannot "
-        "be fully computed. Not fabricated; flagged as a gap.",
+        "Task 6 UPDATE: the H=5 gap is closed (tokens recovered by re-run, not "
+        "estimated) and it CHANGES the finding: at H=5 the cheap Haiku zero-shot "
+        "judge is expected-cost-optimal in the large majority of the grid "
+        f"({findings['pareto_by_horizon'].get('H5', {}).get('grid_cells_won', {}).get('haiku_zeroshot', '?')}/3600), "
+        "because the extract+check strategy has a nonzero false-reject rate there. "
+        "Symbolic dominance is a H>=10 property, not universal across all horizons.",
     ]
 
     (OUT / "decision_findings.json").write_text(json.dumps(findings, indent=2))

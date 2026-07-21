@@ -1,0 +1,17 @@
+{
+  "n_records": 72,
+  "model": "claude-haiku-4-5",
+  "budget": 8192,
+  "combos": {
+    "haiku_zeroshot": {
+      "mean_output_tokens": 505.2,
+      "n_tokens_measured": 72,
+      "verdict_match_vs_saved": "72/72"
+    },
+    "haiku_cot": {
+      "mean_output_tokens": 636.5,
+      "n_tokens_measured": 72,
+      "verdict_match_vs_saved": "72/72"
+    }
+  }
+}

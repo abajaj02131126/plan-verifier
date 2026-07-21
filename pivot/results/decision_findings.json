@@ -27,6 +27,19 @@
     ]
   },
   "pareto_by_horizon": {
+    "H5": {
+      "tiers": [
+        "symbolic",
+        "haiku_zeroshot",
+        "haiku_cot"
+      ],
+      "grid_cells_won": {
+        "symbolic": 540,
+        "haiku_zeroshot": 3060,
+        "haiku_cot": 0
+      },
+      "note": "cells where each tier is expected-cost-optimal over the (S in [1,200], lam in [0.01,100]) grid"
+    },
     "H20": {
       "tiers": [
         "symbolic",
@@ -58,13 +71,7 @@
       "note": "cells where each tier is expected-cost-optimal over the (S in [1,200], lam in [0.01,100]) grid"
     }
   },
-  "h5_gap": {
-    "symbolic_recall": 1.0,
-    "symbolic_precision": 0.903,
-    "judge_zs_recall": 1.0,
-    "judge_zs_precision": 1.0,
-    "note": "At H=5 the extract+check strategy has precision 0.903 (a small false-reject rate from LLM-extraction noise on hyphenated args), while both judges have recall 1.0 AND precision 1.0. So at H=5 a judge can beat symbolic on the accuracy terms, and whether it wins overall depends on lam via call cost. BUT H=5 judge output-token counts were NOT recorded in the Phase-8 run (output_tokens logging was added later), so call_cost(judge,H=5) is unavailable. We do NOT fabricate it. The H=5 boundary is: symbolic optimal iff lam > fr_symbolic * r / call_cost_judge (unknown RHS denominator). Follow-up (scoped out, new API): re-run H=5 judges logging tokens."
-  },
+  "h5_gap": {},
   "stakes_pricing_check": {
     "raw_recall_divergence_horizon": 10,
     "symbolic_dominant_on_accuracy_alone_at": "H>=10 (recall 1.0, fr 0)",
@@ -73,6 +80,26 @@
   "honesty_flags": [
     "Sonnet-5 matches symbolic on recall (1.0) at H=20 and H=40; the symbolic advantage in this cost model is ZERO CALL COST + guaranteed soundness, NOT higher accuracy than the strong judge. Do not overclaim accuracy.",
     "At lambda=0 (dollar cost ignored) Sonnet-5 TIES symbolic at H=20/40; symbolic is not strictly optimal there. Reported, not hidden.",
-    "H=5 judge token cost is unavailable (not logged in Phase-8 run); the one regime where a judge could be cost-optimal (H=5, symbolic fr>0) cannot be fully computed. Not fabricated; flagged as a gap."
-  ]
+    "Task 6 UPDATE: the H=5 gap is closed (tokens recovered by re-run, not estimated) and it CHANGES the finding: at H=5 the cheap Haiku zero-shot judge is expected-cost-optimal in the large majority of the grid (3060/3600), because the extract+check strategy has a nonzero false-reject rate there. Symbolic dominance is a H>=10 property, not universal across all horizons."
+  ],
+  "h5_gap_RESOLVED": {
+    "status": "CLOSED via re-run (no estimate); tokens 72/72 verdict-matched",
+    "symbolic_H5": {
+      "recall": 1.0,
+      "false_reject_rate": 0.0682,
+      "call_cost": 0.0
+    },
+    "haiku_zeroshot_H5": {
+      "recall": 1.0,
+      "false_reject_rate": 0.0,
+      "call_cost_usd": 0.002526
+    },
+    "grid_cells_won_H5": {
+      "symbolic": 540,
+      "haiku_zeroshot": 3060,
+      "haiku_cot": 0
+    },
+    "changes_the_finding": true,
+    "note": "The finding CHANGES at H=5. Unlike H>=10 (symbolic 3600/3600), at H=5 the symbolic strategy wins only 540/3600 cells; the cheap Haiku zero-shot judge wins 3060/3600. Reason: at H=5 LLM-extraction noise gives the symbolic strategy a nonzero false-reject rate (0.068, the 3 hyphenated-arg tool plans), while the judge has recall 1.0 AND fr 0; the judge's dollar cost is tiny, so it is expected-cost-optimal except in the high-lambda strip where call cost dominates. So horizon genuinely matters: at short horizon a cheap accurate judge can beat the extract+check strategy; at H>=10 the checker dominates."
+  }
 }
