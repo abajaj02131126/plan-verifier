@@ -69,7 +69,7 @@ def request_plan(
     client: anthropic.Anthropic,
     prompt: str,
     model: str = DEFAULT_MODEL,
-    max_tokens: int = 1024,
+    max_tokens: int = 4096,
     temperature: float = 1.0,
     max_attempts: int = 4,
 ) -> str:

@@ -21,7 +21,7 @@ endif
 
 DOMAINS := blocksworld logistics tools
 
-.PHONY: reproduce test problems plans paraphrase verdicts baselines eval
+.PHONY: reproduce test problems plans paraphrase verdicts baselines eval horizon
 
 test:
 	$(PY) -m pytest -q
@@ -64,3 +64,10 @@ eval:
 
 reproduce: test problems plans paraphrase verdicts baselines eval
 	@echo "Done. See results/summary.json and results/figures/."
+
+# Long-horizon experiment (10/20/40/80-step plans, tiered pipeline).
+# Requires the short-horizon data above (trust model trains on it).
+horizon:
+	bash scripts/horizon_pipeline.sh
+	$(PY) -m scripts.run_horizon_eval --out results/horizon/
+	@echo "Done. See results/horizon/summary.json and results/horizon/figures/."

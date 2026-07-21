@@ -31,6 +31,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", required=True, type=Path, help="output .jsonl path")
     parser.add_argument("--min-plan-len", type=int, default=3, help="minimum gold plan length")
     parser.add_argument("--max-plan-len", type=int, default=8, help="maximum gold plan length")
+    parser.add_argument(
+        "--horizon",
+        type=int,
+        default=None,
+        help="target long-horizon plan length (10/20/40/80): use the constructive "
+        "generators in verifier.domains.horizon instead of BFS (gold plans are "
+        "valid but not optimal); overrides --min/max-plan-len",
+    )
     return parser
 
 
@@ -41,15 +49,23 @@ def main(argv: list[str] | None = None) -> int:
     spec = DOMAIN_REGISTRY[args.domain]
     args.out.parent.mkdir(parents=True, exist_ok=True)
 
+    if args.horizon is not None:
+        from verifier.domains.horizon import HORIZON_GENERATORS
+
+        gen = HORIZON_GENERATORS[args.domain]
+        generate = lambda i: gen(seed=args.seed, index=i, target_len=args.horizon)
+    else:
+        generate = lambda i: spec.generate_problem(
+            seed=args.seed,
+            index=i,
+            min_plan_len=args.min_plan_len,
+            max_plan_len=args.max_plan_len,
+        )
+
     written = 0
     with args.out.open("w") as f:
         for i in range(args.n):
-            problem, gold_plan = spec.generate_problem(
-                seed=args.seed,
-                index=i,
-                min_plan_len=args.min_plan_len,
-                max_plan_len=args.max_plan_len,
-            )
+            problem, gold_plan = generate(i)
             record = {
                 "problem": problem.model_dump(),
                 "gold_plan": [ground_action_to_dict(ga) for ga in gold_plan],

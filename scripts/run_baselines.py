@@ -57,6 +57,8 @@ def main(argv: list[str] | None = None) -> int:
             "labels": rec["labels"],
             "judge_zeroshot_valid": zs.predicted_valid,
             "judge_cot_valid": cot.predicted_valid,
+            "judge_zeroshot_output_tokens": zs.output_tokens,
+            "judge_cot_output_tokens": cot.output_tokens,
             "self_repair_changed_plan": changed,
             "self_repair_repaired_valid": rep.repaired_labels.overall_valid,
             "self_repair_repaired_plan": rep.repaired_plan,

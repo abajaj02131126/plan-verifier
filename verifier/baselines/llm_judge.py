@@ -23,6 +23,7 @@ class JudgeResult(BaseModel):
     system: str
     predicted_valid: Optional[bool]  # None = unparseable judge output
     raw_response: str
+    output_tokens: Optional[int] = None  # judge cost scales with plan horizon
 
     @property
     def reject(self) -> bool:
@@ -77,10 +78,16 @@ def judge_plan(
         # anyway, so a tight budget (64, then 512) truncated before any
         # VERDICT line and made most outputs unparseable (360/360 then
         # 146/360 in dev runs). The zs/CoT contrast is the *prompt* (no
-        # think-step-by-step instruction), not the token budget.
-        max_tokens=2048,
+        # think-step-by-step instruction), not the token budget. 8192 leaves
+        # room to simulate 80-step plans in the horizon experiment.
+        max_tokens=8192,
         temperature=0.0,
         messages=[{"role": "user", "content": _judge_prompt(problem, plan_text, cot)}],
     )
     raw = "".join(b.text for b in response.content if b.type == "text")
-    return JudgeResult(system=system, predicted_valid=parse_judge_verdict(raw), raw_response=raw)
+    return JudgeResult(
+        system=system,
+        predicted_valid=parse_judge_verdict(raw),
+        raw_response=raw,
+        output_tokens=response.usage.output_tokens,
+    )

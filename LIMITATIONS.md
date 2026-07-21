@@ -39,6 +39,26 @@ flagged at the point of use in PROGRESS.md.
   distribution of stronger models may differ; the pilot-calibration
   comparison should be re-run per plan-generation model.
 
+## Long-horizon experiment design
+
+- **Long-horizon gold plans are valid but NOT optimal.** The constructive
+  planners (`verifier/domains/horizon.py`) tear down and rebuild
+  (blocksworld) or route sequentially (logistics/tools), so "horizon H" is
+  a band on the REFERENCE plan length; LLM plans for the same problems may
+  legitimately be shorter. Consequently the 1.25x resource-cap tightening
+  is computed against a wasteful reference, leaving looser caps than at
+  short horizons — resource-infeasibility is expected to be rarer in the
+  long-horizon flaw mix.
+- **The h40/h80 extraction cells are 12-record stratified subsets** (3 per
+  condition per domain) — the tiered design keeps k*steps extraction cost
+  bounded, at the price of wide error bars on the hybrid/extraction-path
+  numbers at those horizons. Judges, self-repair, and the rule-parsed
+  symbolic check cover all 40 records per cell.
+- **Judge budgets were raised to 8192 output tokens** (and plan
+  generation/paraphrase/self-repair budgets raised accordingly) so that
+  80-step simulation is not budget-truncated; short- vs long-horizon judge
+  comparisons therefore use different budgets than the original dev run.
+
 ## Architecture & features
 
 - **No token-level log-probability feature.** The Anthropic API does not

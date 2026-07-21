@@ -58,6 +58,23 @@ Key artifacts after a run:
 | `results/qualitative_examples.md` | case studies: hybrid-caught-judge-missed, trust-caught-symbolic-missed, hybrid mistakes |
 | `results/figures/` | PR curve, reliability diagram, ablation bar chart (PNG+SVG) |
 
+## Long-horizon experiment
+
+```bash
+make horizon    # after make reproduce: 10/20/40/80-step plans, tiered pipeline
+```
+
+Scales the domains (blocks / packages / trips) so reference plans hit
+10/20/40/80 steps, using constructive gold planners
+(`verifier/domains/horizon.py` — BFS is infeasible past ~10 steps; the
+constructive plans are valid by construction but not optimal). The full
+6-system pipeline runs at h10/h20; at h40/h80 the expensive LLM-extraction
+path runs on 12-record stratified subsets while judges, self-repair, and the
+rule-parsed symbolic check cover all records. The trust model is trained on
+short-horizon data only and applied zero-shot at every horizon. Outputs land
+in `results/horizon/` (metric-vs-horizon curves, judge cost curve,
+extraction-fidelity curve, downstream at h10/h20).
+
 ## Pipeline stages (each is a CLI in `scripts/`)
 
 ```

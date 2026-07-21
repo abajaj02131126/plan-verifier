@@ -47,7 +47,7 @@ Plan:
 def paraphrase(client, text: str, model: str) -> str:
     response = client.messages.create(
         model=model,
-        max_tokens=1024,
+        max_tokens=4096,
         temperature=0.7,
         messages=[{"role": "user", "content": _PARAPHRASE_PROMPT.format(plan=text)}],
     )

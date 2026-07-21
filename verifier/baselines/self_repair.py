@@ -59,7 +59,7 @@ def self_repair(
 ) -> SelfRepairResult:
     response = client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=8192,
         temperature=0.0,
         messages=[{"role": "user", "content": _repair_prompt(problem, plan_text)}],
     )
