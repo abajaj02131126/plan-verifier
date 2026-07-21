@@ -1,0 +1,177 @@
+{
+  "n_calibration_unfaithful": 5,
+  "n_test_unfaithful": 3,
+  "calibration_unfaithful_trust_scores": [
+    0.7371,
+    0.8615,
+    0.8615,
+    0.8615,
+    0.8615
+  ],
+  "alpha_sweep": {
+    "0.1": {
+      "tau": 1.0,
+      "vacuous_flag_everything": true,
+      "coverage_guarantee": {
+        "l": 0,
+        "note": "l=0: threshold at max calibration score; guaranteed coverage >= 5/6 = 0.833, but any tighter (higher) coverage target is unreachable from this calibration size.",
+        "mean_coverage": null,
+        "ci90": null
+      },
+      "realized_test_coverage_unfaithful": {
+        "flagged": 3,
+        "of": 3,
+        "point": 1.0,
+        "cp95_ci": [
+          0.292,
+          1.0
+        ]
+      },
+      "total_test_records_flagged": 72,
+      "total_test_records": 72
+    },
+    "0.167": {
+      "tau": 0.8615,
+      "vacuous_flag_everything": false,
+      "coverage_guarantee": {
+        "l": 1,
+        "mean_coverage": 0.8333,
+        "ci90": [
+          0.5493,
+          0.9898
+        ],
+        "note": "coverage ~ Beta(5,1); interval is wide because n_cal=5."
+      },
+      "realized_test_coverage_unfaithful": {
+        "flagged": 3,
+        "of": 3,
+        "point": 1.0,
+        "cp95_ci": [
+          0.292,
+          1.0
+        ]
+      },
+      "total_test_records_flagged": 7,
+      "total_test_records": 72
+    },
+    "0.2": {
+      "tau": 0.8615,
+      "vacuous_flag_everything": false,
+      "coverage_guarantee": {
+        "l": 1,
+        "mean_coverage": 0.8333,
+        "ci90": [
+          0.5493,
+          0.9898
+        ],
+        "note": "coverage ~ Beta(5,1); interval is wide because n_cal=5."
+      },
+      "realized_test_coverage_unfaithful": {
+        "flagged": 3,
+        "of": 3,
+        "point": 1.0,
+        "cp95_ci": [
+          0.292,
+          1.0
+        ]
+      },
+      "total_test_records_flagged": 7,
+      "total_test_records": 72
+    },
+    "0.33": {
+      "tau": 0.8615,
+      "vacuous_flag_everything": false,
+      "coverage_guarantee": {
+        "l": 1,
+        "mean_coverage": 0.8333,
+        "ci90": [
+          0.5493,
+          0.9898
+        ],
+        "note": "coverage ~ Beta(5,1); interval is wide because n_cal=5."
+      },
+      "realized_test_coverage_unfaithful": {
+        "flagged": 3,
+        "of": 3,
+        "point": 1.0,
+        "cp95_ci": [
+          0.292,
+          1.0
+        ]
+      },
+      "total_test_records_flagged": 7,
+      "total_test_records": 72
+    },
+    "0.5": {
+      "tau": 0.8615,
+      "vacuous_flag_everything": false,
+      "coverage_guarantee": {
+        "l": 3,
+        "mean_coverage": 0.5,
+        "ci90": [
+          0.1893,
+          0.8107
+        ],
+        "note": "coverage ~ Beta(3,3); interval is wide because n_cal=5."
+      },
+      "realized_test_coverage_unfaithful": {
+        "flagged": 3,
+        "of": 3,
+        "point": 1.0,
+        "cp95_ci": [
+          0.292,
+          1.0
+        ]
+      },
+      "total_test_records_flagged": 7,
+      "total_test_records": 72
+    }
+  },
+  "stakes_adjusted_gate": {
+    "blocksworld": {
+      "stakes_S": 1.0,
+      "alpha_of_S": 0.5,
+      "tau": 0.8615,
+      "vacuous_flag_everything": false
+    },
+    "logistics": {
+      "stakes_S": 10.0,
+      "alpha_of_S": 0.1,
+      "tau": 1.0,
+      "vacuous_flag_everything": true
+    },
+    "tools": {
+      "stakes_S": 50.0,
+      "alpha_of_S": 0.02,
+      "tau": 1.0,
+      "vacuous_flag_everything": true
+    }
+  },
+  "decision_change_vs_tau0": {
+    "primary_alpha_0.1": {
+      "alpha": 0.1,
+      "tau": 1.0,
+      "vacuous": true,
+      "symbolic_pass_records_in_test": 41,
+      "newly_flagged_by_conformal_gate": 41,
+      "of_which_actually_flawed_good_flip": 0,
+      "of_which_actually_valid_false_reject": 41,
+      "changes_any_decision": true
+    },
+    "tightest_nonvacuous_alpha_0.167": {
+      "alpha": 0.167,
+      "tau": 0.8615,
+      "vacuous": false,
+      "symbolic_pass_records_in_test": 41,
+      "newly_flagged_by_conformal_gate": 0,
+      "of_which_actually_flawed_good_flip": 0,
+      "of_which_actually_valid_false_reject": 0,
+      "changes_any_decision": false
+    }
+  },
+  "honesty_flags": [
+    "Only 5 calibration unfaithful examples. At alpha=0.1 the conformal threshold is VACUOUS (tau=1.0, flags every record) \u2014 a 90% distribution-free guarantee is unreachable from 5 positives except by flagging everything. The tightest NON-vacuous level is alpha~=0.167 (coverage 5/6=0.833).",
+    "Realized test coverage is measured on only 3 unfaithful records; its 95% CI spans essentially the whole [0,1] range. The point estimate is not reliable.",
+    "The conformal gate DOES change decisions vs tau=0, but at alpha=0.1 it does so by flagging a large fraction of records (most trust scores cluster near the calibration max), i.e. it buys unfaithful-coverage with heavy false rejects. The small calibration set, not the method, is the binding limitation."
+  ]
+}
