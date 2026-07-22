@@ -20,8 +20,8 @@
 /TemplateVersion (2027.1)
 }
 
-\title{Verify Before You Execute: A Hybrid Symbolic--Learned\\
-Pre-Execution Verifier for LLM-Generated Plans}
+\title{Verify Before You Execute: When Sound Checking Beats\\
+LLM Judging for Pre-Execution Plan Verification}
 \author{Ari Bajaj}
 \affiliations{Illinois Mathematics and Science Academy\\
 abajaj1@imsa.edu}
@@ -36,26 +36,29 @@ paid for at execution time. We present a pre-execution verifier that
 translates a free-text plan into a typed action schema and \emph{soundly}
 checks consistency, goal completeness, and resource feasibility by forward
 simulation. We initially hypothesized that its advantage over an LLM ``plan
-judge'' was accuracy that widens with plan length---and with a small model
-(Claude Haiku) as judge, judge recall did fall from 0.94 to 0.84 as plans
-grew from 10 to 80 steps while the checker held recall 1.0. \textbf{A
-stronger judge overturned that explanation:} Claude Sonnet~5, given the
-identical prompt and token budget, scored recall 1.0 at 20, 40, and 80 steps
-alike---no degradation. Horizon-driven judge degradation is thus a
-property of weaker judges, not of judging. What survives is a sharper,
-correct claim, which we state as a proposition and prove from the
-expected-cost model: whenever a judge merely \emph{matches} the checker's
-accuracy, the checker is still expected-cost-optimal because it is sound at
-\emph{zero} marginal decision-time cost---dominance by cost and guarantee,
-not by accuracy. Empirically the checker is expected-cost-optimal across the
-entire (stakes, cost-weight) grid at every horizon $\ge 10$; at 3--8 steps,
-where extraction noise gives the checker a small false-reject rate, a cheap
-accurate judge can instead be optimal---so the boundary is horizon- and
-cost-dependent, which we map. We also give the deployment argument that does
-not depend on model tier at all: the checker is structurally immune to the
-silent guardrail-collapse modes we document, in which a fail-open LLM judge
-with a too-small token budget accepted 100\% of flawed plans while appearing
-to run. All results are reproducible from a single make target on a laptop.
+judge'' was accuracy that widens with plan length---and with a small judge
+model, judge recall did fall from 0.94 to 0.84 as plans grew from 10 to 80
+steps while the checker held recall 1.0. \textbf{A stronger frontier judge
+overturned that explanation:} under the identical prompt and token budget it
+showed no measurable horizon-dependent degradation, scoring recall 1.0 at
+20, 40, and 80 steps alike. Horizon-driven judge degradation is thus a
+property of weaker judges, not of judging. What survives is a sharper claim,
+stated as a family of propositions and proved from an expected-cost model:
+whenever a judge merely \emph{matches} the checker's accuracy, the checker is
+still expected-cost-optimal because it is sound at \emph{zero} marginal
+decision-time cost---dominance by cost and guarantee, not by accuracy.
+Empirically the checker is expected-cost-optimal across the entire (stakes,
+cost-weight) grid at every horizon $\ge 10$; at 3--8 steps, where extraction
+noise gives the checker a small false-reject rate, a cheap accurate judge can
+instead be optimal---so the boundary is horizon- and cost-dependent, which we
+map. The deployment argument needs no model comparison at all: the checker is
+structurally immune to the silent guardrail-collapse modes we document, in
+which a fail-open LLM judge with a too-small token budget accepted 100\% of
+flawed plans while appearing to run. We validate the pipeline on three
+synthetic domains and on real tasks from the ALFWorld benchmark (65\% of
+sampled tasks translate onto the schema, with the independent-oracle
+cross-check holding on every translated task). All results reproduce from a
+single make target on a laptop.
 \end{abstract}
 
 \section{Introduction}
@@ -197,33 +200,24 @@ temperature 0.7; the modal extraction is used, and two agreement statistics
 with the extractor's self-reported confidence, become features rather than
 being discarded.
 
-\subsection{Trust Model and Fusion}
+\subsection{Fusion Rule and an Optional Trust Layer}
 \label{sec:trust}
-
-The trust model answers: \emph{given how the extraction went, how likely is
-the symbolic verdict faithful to the plan as written?} Its label is
-agreement between the production verdict (LLM extraction path) and a
-reference verdict computed by a deterministic rule-based parse of the
-original plan text. Features (17) span extraction confidence (mean/min),
-$k$-resample agreement, plan-shape statistics, the fraction of
-failed-extraction steps, a TF-IDF character-$n$-gram similarity between the
-preconditions the extractor \emph{mentioned} and those the schema
-\emph{requires}, the symbolic verdict bits and violation counts, and a
-domain indicator. The classifier is a class-balanced logistic regression,
-Platt-scaled on a held-out validation split; all splits are by
-\emph{problem}, so no problem's records straddle train/test.
 
 Fusion is a two-clause rule with a tested invariant:
 \[
 \textbf{reject} \iff \neg\text{symbolic\_valid} \;\lor\; \text{trust} < \tau,
 \]
 where the first clause is unconditional---no trust score can rescue a hard
-symbolic failure---and $\tau$ is picked on validation. $\tau{=}0$ recovers
-symbolic-only exactly. We describe this component in full for
-reproducibility, but---previewing Section~\ref{sec:trustresult}---it is
-evaluated as a \emph{negative result}: at our data scale the learned layer
-never beneficially changes a decision, under either of two calibration
-methods.
+symbolic failure---and $\tau$ is picked on validation ($\tau{=}0$ recovers
+symbolic-only exactly). The optional \emph{trust} score is a calibrated
+logistic model predicting whether the extraction's verdict is faithful to
+the plan as written (label: agreement with a rule-based reference parse),
+over extraction-confidence, $k$-resample-agreement, plan-shape, and
+symbolic-verdict features; the full 17-feature list and training details are
+in the repository. We include it for completeness, but---previewing
+Section~\ref{sec:trustresult}---it is reported as a \emph{negative result}
+(inert at our data scale under two calibration methods), so we keep its
+footprint here minimal.
 
 \section{Experimental Setup}
 
@@ -448,9 +442,9 @@ success falls
 for every arm as horizon grows (the underlying planner LLM struggles at
 10--20 steps, independent of verification), but the hybrid still leads at
 both horizons (0.667 vs.\ 0.525 at $H{=}10$; 0.383 vs.\ 0.283 at $H{=}20$).
-We flag two limits on this result honestly: the long-horizon extraction
-cells are 12-record stratified subsets with correspondingly wide error
-bars, and the constructive gold plans are valid but not optimal
+Two limits on this result: the long-horizon extraction cells are 12-record
+stratified subsets with correspondingly wide error bars, and the
+constructive gold plans are valid but not optimal
 (Section~\ref{sec:horizonsetup}).
 
 \begin{figure}[t]
@@ -476,28 +470,37 @@ call cost (weighted by $\lambda$, converting dollars into the same units):
 The checker's call cost is $0$ (no API call at decision time); a judge's is
 its measured token cost times list price.
 
-\paragraph{Proposition.} \emph{At a horizon where a judge tier and the
-checker both have recall $1$ and false-reject rate $0$, and the checker's
-call cost is $0$ while the judge's is $c>0$, then
-$\text{cost}_\text{checker} \le \text{cost}_\text{judge}$ for all
-$S,r,\lambda\ge 0$, with equality iff $\lambda=0$.} The proof is immediate:
-under the shared premises both the $S$ and $r$ terms vanish for both
-strategies, leaving $0 \le c\lambda$. The entire gap is the judge's
-per-call cost; stakes and replan cost drop out.
+We give a family of three propositions, one per regime the data exhibits,
+each proved by substitution into this one formula (full proofs in the
+repository). Write $c$ for the judge's per-record call cost, $\rho$ for its
+recall, and $\phi$ for the checker's false-reject rate.
 
-Empirically this is exactly what the measured grid shows. Sweeping
-$S\in[1,200]$ and $\lambda\in[0.01,100]$, the checker is expected-cost-
-optimal in \textbf{all} $3600/3600$ cells at $H{=}20$, $40$, and $80$---the
-regime where Sonnet-5 meets the premises---tying only on the $\lambda{=}0$
-edge. The proposition is deliberately \emph{conditional}: it does not claim
-universal dominance, and it correctly predicts its own boundary. At
-$H{=}5$, LLM-extraction noise gives the checker a nonzero false-reject rate
-($0.068$, three hyphenated-argument tool plans) so the premise fails; there
-the cheap, accurate Haiku zero-shot judge is optimal in $3060/3600$ cells,
-and the checker wins only the high-$\lambda$ strip where dollar cost
-dominates. The decision is thus genuinely horizon- and cost-dependent, and
-the model maps where each strategy wins rather than asserting one always
-does.
+\textbf{Prop.~1 (judge ties on accuracy).} \emph{If both have recall $1$ and
+fr $0$, checker call cost $0$, judge $c>0$, then
+$\text{cost}_\text{checker}\le\text{cost}_\text{judge}$ for all
+$S,r,\lambda\ge0$, equality iff $\lambda=0$.} The $S$ and $r$ terms vanish,
+leaving $0\le c\lambda$: the whole gap is the judge's call cost. \emph{Data:}
+the strong frontier judge at $H{=}20,40,80$---the checker is optimal in all
+$3600/3600$ grid cells (sweeping $S\in[1,200]$, $\lambda\in[0.01,100]$),
+tying only at $\lambda{=}0$.
+
+\textbf{Prop.~2 (checker has residual false-rejects).} \emph{If the checker
+has recall $1$ but $\phi>0$ while the judge is accuracy-perfect, the judge is
+optimal iff $\lambda<\phi r/c$}---a threshold independent of stakes $S$.
+\emph{Data:} at $H{=}5$, extraction noise gives $\phi{=}0.068$; with $r{=}1$
+the boundary $\lambda^\star{=}\phi/c{=}27$ predicts the judge optimal in the
+lower ${\approx}85\%$ of $\lambda$, i.e.\ $3060/3600$ cells---matching the
+measured grid, which is where the earlier grid-search result now has an
+algebraic explanation.
+
+\textbf{Prop.~3 (judge recall below 1).} \emph{If the checker has recall $1$,
+fr $0$, and the judge has recall $\rho<1$, the checker dominates by the
+accuracy term alone: at $\lambda{=}0$ the gap is already
+$(1{-}\rho)S+\text{fr}_J r>0$ whenever $S>0$}---no call-cost term needed.
+\emph{Data:} the weaker judge at $H\ge10$, formalizing the original
+horizon-degradation observation. The three regimes are mutually exclusive on
+$(\phi,\rho)$ and each corresponds to a measured cell, so the family maps
+where each strategy wins without ever claiming universal dominance.
 
 \subsection{Negative Result: the Learned Trust Layer Is Inert Under Two
 Independent Calibration Methods}
@@ -610,7 +613,47 @@ with horizon and higher for the stronger judge). A verifier that is free at
 decision time changes how often one can afford to check---the term the
 decision model prices as $\lambda$.
 
-\subsection{Generality: the Tool-Use Domain}
+\subsection{Extraction Accuracy}
+\label{sec:extraction}
+
+Because the whole pipeline rests on the NL$\to$schema extraction, we report
+its accuracy directly, as a metric distinct from the trust model's
+verdict-faithfulness: the fraction of individual extracted \emph{steps} whose
+(action, arguments) exactly match the rule-based reference parse
+(Table~\ref{tab:extraction}). In the prose regime, step accuracy is
+0.92 pooled and is lowest on Tools (0.878). The known failure signature is
+confirmed quantitatively rather than anecdotally: of the same-action argument
+errors, \textbf{83\% in Tools are hyphenated-argument mangling}
+(\texttt{flights-scope}$\to$\texttt{flights}), versus 0\% in Blocksworld
+(whose errors are name normalization, \texttt{b3}$\to$``block 3'') and 29\%
+in Logistics. The constrained-format regime is lossless at the verdict level
+(240/240, Section~\ref{sec:prose}); per-step extraction there was not
+separately logged, as the rule parser is the reference. (The real domains
+used deterministic injection, so step-level LLM-extraction accuracy is not
+reported for them.)
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+Domain & Step accuracy (prose) & Hyphen-mangle share \\
+\midrule
+Blocksworld & 0.947 & 0/26 (0\%) \\
+Logistics & 0.939 & 7/24 (29\%) \\
+Tools & 0.878 & \textbf{50/60 (83\%)} \\
+\midrule
+Pooled & 0.920 & --- \\
+\bottomrule
+\end{tabular}
+\caption{Step-level extraction accuracy vs.\ the rule-based reference, and
+the share of same-action argument errors attributable to hyphenated-argument
+mangling. Confirms the mangling is the dominant extraction-error mode
+specifically in Tools.}
+\label{tab:extraction}
+\end{table}
+
+\subsection{Generality: Synthetic and Real Domains}
 \label{sec:tools}
 
 The Tools domain models a travel-booking agent: eight tools, auth scopes as
@@ -625,6 +668,36 @@ constant action arguments, so scopes are pinned by identity predicates.
 Notably, the pipeline's only false rejects arise here, from hyphenated
 tool-argument extraction---evidence that tool-style vocabularies stress the
 NL$\to$schema seam more than classical planning vocabularies do.
+
+\paragraph{A real external benchmark (ALFWorld).} To test whether the method
+survives contact with data we did not author, we adapted
+\textbf{ALFWorld}~\citep{shridhar2021alfworld}, whose task backend is
+PDDL. We did \emph{not} get ``zero code changes'': a real benchmark needed a
+real adapter, with disclosed semantics-preserving compilations (a maintained
+\texttt{accessible} predicate for the pickup/put accessibility disjunction;
+existential goals grounded to the expert plan's target instances; dropped
+action-costs). On 80 randomly sampled real ALFRED trials, \textbf{65\%
+(52/80) translate onto the DSL and pass the independent-oracle cross-check},
+with the remaining 35\% failing for specific, reported reasons---the
+movable-receptacle family (nested-receptacle predicates the DSL lacks, 0/10),
+the knife-in-hand slice family, and look-at-in-light---not silently dropped.
+On the 52 translated tasks plus 154 deterministically flaw-injected variants
+(206 records), the labeler and checker \textbf{agree 206/206}, and the
+checker catches every injected flaw. Because ALFWorld's object identifiers
+are machine-encoded and its states have 200+ atoms, faithful LLM plan
+\emph{generation} over readable names is unreliable, so flaws here are
+injected deterministically rather than by prompting---a disclosed
+methodology difference. The load-bearing result is that the sound checker and
+the independent oracle agree on real benchmark data, at a translation rate we
+report honestly rather than curate.
+
+\paragraph{Real API traces.} We also encoded five real public APIs (Stripe,
+SendGrid, GitHub, Slack, Google Calendar), with their actual OAuth scopes and
+prerequisite chains, into the existing Tools DSL as a labeled real-trace
+subset (32/32 oracle cross-check). The one representational cost, reported
+rather than hidden: real APIs return typed values (a payment-intent id) that
+later calls consume, and the DSL---lacking typed return values---models them
+as boolean prerequisite facts, so value-level errors are out of scope.
 
 \section{Limitations}
 
@@ -661,14 +734,14 @@ reliable with plan length.
 
 \section{Conclusion}
 
-We built a sound pre-execution verifier for free-text LLM plans and, in
-evaluating it, corrected our own central hypothesis in public. We expected
-its edge over an LLM judge to be accuracy that widens with plan length; that
-held for a weak judge (Claude Haiku, recall $0.94\!\to\!0.84$ over
-$10\!\to\!80$ steps) but was overturned by a strong one (Claude Sonnet~5,
-recall $1.0$ at 20, 40, and 80 steps under the identical prompt and budget).
-Horizon-driven judge degradation is a property of the judge model, not of
-judging, and we do not claim otherwise.
+We built a sound pre-execution verifier for free-text LLM plans, and
+evaluating it corrected our own central hypothesis. We expected its edge over
+an LLM judge to be accuracy that widens with plan length; that held for a
+weaker judge model (recall $0.94\!\to\!0.84$ over $10\!\to\!80$ steps) but
+was overturned by a stronger frontier judge, which under the identical prompt
+and budget showed no measurable horizon-dependent degradation (recall $1.0$
+at 20, 40, and 80 steps). Horizon-driven judge degradation is a property of
+the judge model, not of judging.
 
 What survives is sharper. When a judge only \emph{matches} the checker's
 accuracy, the checker is still the expected-cost-optimal verification
