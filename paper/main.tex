@@ -786,8 +786,10 @@ non-synthetic long-horizon planning tasks.
 All code, domain generators, prompts, and evaluation scripts are in the
 project repository; \texttt{make reproduce} regenerates every number and
 figure in this paper from fixed seeds (\texttt{make reproduce FULL=1} for
-the full-scale configuration). Datasets are synthesized locally; the only
-external dependency is an Anthropic API key.
+the full-scale configuration). The synthetic datasets are generated locally;
+the external dependencies are an Anthropic API key and, for the real-task
+results of Section~\ref{sec:tools}, the ALFWorld package
+(\texttt{alfworld-download} fetches the ALFRED tasks).
 
 \bibliography{references}
 
