@@ -16,55 +16,95 @@ The expected-cost model implemented in `pivot/decision_model.py` is, verbatim:
 with S ≥ 0 (missed-flaw stakes), r ≥ 0 (replan cost), λ ≥ 0 (dollar-cost
 weight). No other cost formula is introduced for the proof.
 
-## Proposition
+The family below has three propositions, one per regime the data actually
+exhibits. Common notation: write $c=\text{call\_cost}(J,H)>0$ for the judge's
+per-record dollar cost, $\rho=\text{recall}(J,H)$, and
+$\phi=\text{false\_reject\_rate}(\text{sym},H)$. All three are proved by
+substitution into the single formula above; none introduces a new one.
 
-**Let H be a horizon at which a judge tier J satisfies recall(J,H) = 1 and
-false_reject_rate(J,H) = 0, and at which the symbolic checker satisfies
-recall(sym,H) = 1, false_reject_rate(sym,H) = 0, and call_cost(sym,H) = 0
-while call_cost(J,H) = c > 0. Then**
+### Proposition 1 (judge ties the checker on accuracy — the base case)
 
-    expected_cost(sym, H, S, r, λ) ≤ expected_cost(J, H, S, r, λ)
-    for all S, r, λ ≥ 0, with equality iff λ = 0.
+**If at horizon $H$ both the checker and a judge tier $J$ have recall $1$ and
+false-reject rate $0$, and $\text{call\_cost}(\text{sym},H)=0$ while
+$\text{call\_cost}(J,H)=c>0$, then**
+$$\text{cost}_\text{sym} \le \text{cost}_J \quad\text{for all } S,r,\lambda\ge 0,\ \text{equality iff } \lambda=0.$$
 
-## Proof
+*Proof.* $\text{cost}_\text{sym}=(1{-}1)S+0\cdot r+0\cdot\lambda=0$ and
+$\text{cost}_J=(1{-}1)S+0\cdot r+c\lambda=c\lambda$; so the gap is $c\lambda\ge 0$,
+zero iff $\lambda=0$. The $S$ and $r$ terms vanish under the shared premises —
+the whole gap is the judge's per-call cost. $\square$
 
-Substitute the premises into the exact formula:
+*Premises hold in the data at:* Sonnet-5, $H=20,40,80$ (measured recall $1$,
+fr $0$). There the grid is symbolic-optimal in all $3600/3600$ cells for
+$\lambda>0$ and ties at $\lambda=0$ (verified). Says nothing about weaker
+tiers or shorter horizons.
 
-    expected_cost(sym, H, S, r, λ) = (1−1)·S + 0·r + 0·λ = 0
-    expected_cost(J,   H, S, r, λ) = (1−1)·S + 0·r + c·λ = c·λ
+### Proposition 2 (checker has residual false-rejects, judge accuracy-perfect)
 
-Hence expected_cost(J) − expected_cost(sym) = c·λ. Since c > 0 and λ ≥ 0,
-this difference is ≥ 0 for all S, r, λ ≥ 0, and equals 0 iff λ = 0. ∎
+**If at horizon $H$ the checker has recall $1$ but false-reject rate
+$\phi>0$ (and call cost $0$), while a judge tier has recall $1$, fr $0$, and
+call cost $c>0$, then the judge is expected-cost-optimal iff**
+$$\lambda < \frac{\phi\,r}{c},$$
+**the checker iff $\lambda>\phi r/c$, with a tie on the boundary; the
+threshold is independent of the stakes $S$.**
 
-The missed-flaw term (S) and replan term (r) both vanish under the shared
-recall = 1, fr = 0 premises, so S and r drop out entirely: the whole gap is
-the judge's per-call dollar cost c·λ. This is exactly why the H=20/40/80
-heatmaps are a single symbolic-optimal region for every λ > 0 and a tie at
-λ = 0 — the empirical grid and the algebra agree.
+*Proof.* $\text{cost}_\text{sym}=0\cdot S+\phi r+0=\phi r$ and
+$\text{cost}_J=0\cdot S+0+c\lambda=c\lambda$. Then $\text{cost}_J<\text{cost}_\text{sym}
+\iff c\lambda<\phi r \iff \lambda<\phi r/c$. Both recalls are $1$, so the $S$
+term is absent from both sides — the boundary is a horizontal line in
+$\lambda$. $\square$
+
+*Premises hold in the data at:* $H=5$, where LLM-extraction noise gives the
+checker $\phi=0.068$ (three hyphenated-arg tool plans) and both Haiku judges
+have recall $1$, fr $0$. With $r=1$: $\lambda^\star=\phi/c=27.0$ (zero-shot,
+$c=\$2.53\mathrm{e}{-}3$) and $21.4$ (CoT). The zero-shot boundary
+$\lambda^\star{=}27$ over the swept $\lambda\in[0.01,100]$ predicts the judge
+wins the lower $\approx\!85\%$ of $\lambda$ values at every $S$ — i.e.
+$3060/3600$ grid cells — matching the measured H=5 grid exactly (verified).
+
+### Proposition 3 (judge recall below 1 — the original Haiku case)
+
+**If at horizon $H$ the checker has recall $1$ and false-reject rate $0$ (so
+call cost aside its cost is $0$), and a judge tier has recall $\rho<1$, then**
+$$\text{cost}_\text{sym}=0 \le \text{cost}_J = (1{-}\rho)S+\text{fr}_J\,r+c\lambda$$
+**for all $S,r,\lambda\ge 0$, and the domination is witnessed by the
+accuracy term alone: at $\lambda=0$ the gap is already
+$(1{-}\rho)S+\text{fr}_J r$, strictly positive whenever $S>0$.**
+
+*Proof.* Immediate: $\text{cost}_\text{sym}=0$ and every term of
+$\text{cost}_J$ is non-negative, with $(1{-}\rho)S>0$ when $\rho<1,S>0$.
+Thus the checker dominates *without needing the call-cost term* — unlike
+Prop. 1, where the accuracy terms vanish and only $c\lambda$ separates them. $\square$
+
+*Premises hold in the data at:* Haiku, $H=10,20,40$ (recall
+$0.94\!\to\!0.88$), where the $\lambda{=}0$ gap is $2.4$–$5.9$ at $S{=}50,r{=}1$
+(verified) — the checker wins on missed-flaw cost before call cost enters,
+formalizing the paper's original Haiku-degradation observation.
+
+### Reading the family together
+
+The three propositions partition by which premise the data satisfies, and
+each maps to a real measured horizon/tier: Prop. 1 $\to$ Sonnet $H\ge20$
+(cost-only separation), Prop. 2 $\to$ $H=5$ (a genuine judge-optimal region,
+bounded in $\lambda$), Prop. 3 $\to$ Haiku $H\ge10$ (accuracy-only
+separation). None claims universal dominance; each states its premises and is
+confirmed against the grid before inclusion.
 
 ## Scope limits (stated directly, as required)
 
-- **Conditional, not universal.** The proposition assumes the empirical
-  premises hold for the specific tier at the specific horizon. It does **not**
-  assert that symbolic checking always dominates judging.
-- **Where the premises hold in our data:** Sonnet-5 at H = 20, 40, and 80
-  (measured recall 1.0, fr 0). There the proposition applies and the grid is
-  symbolic-optimal for all λ > 0.
-- **Where a premise fails, the proposition says nothing — and the grid
-  reflects that:**
-  - *Weaker tier (Haiku):* recall(Haiku,H) < 1 at every H ≥ 10, so the
-    premise recall(J)=1 fails; the missed-flaw term (1−recall)·S is strictly
-    positive and the proposition does not apply. (Symbolic still wins there
-    empirically, but for the different reason that it has strictly higher
-    recall — not covered by this proposition.)
-  - *Short horizon (H = 5):* the symbolic strategy has
-    false_reject_rate(sym, 5) = 0.068 (LLM-extraction noise on 3
-    hyphenated-arg tool plans), so the premise fr(sym)=0 fails. Here the
-    proposition does **not** hold, and indeed the H=5 grid shows the cheap
-    Haiku zero-shot judge expected-cost-optimal in 3060/3600 cells — the
-    algebra correctly predicts its own boundary of applicability.
-- **The λ = 0 tie is a real degenerate case**, not hidden: with dollar cost
-  ignored, a judge that meets the premises ties the checker exactly.
-
-The proposition therefore earns exactly the claim the data supports —
-*conditional* cost + soundness dominance — and no more.
+- **None of the three is universal.** Each is conditional on its stated
+  premises for a specific tier at a specific horizon; together they do **not**
+  assert that symbolic checking always dominates judging. Prop. 2 in
+  particular *proves a region where a judge is optimal* ($H=5$, low $\lambda$).
+- **Every proposition corresponds to at least one real measured cell** (P1:
+  Sonnet $H\ge20$; P2: $H=5$; P3: Haiku $H\ge10$) — none is included on
+  premises no data point satisfies.
+- **The regimes are exclusive on the checker's false-reject rate and the
+  judge's recall**, the two quantities that decide which term separates the
+  strategies: P1/P3 need $\phi=0$ (checker clean, $H\ge10$), P2 needs
+  $\phi>0$ (extraction noise, $H=5$); P1/P2 need $\rho=1$ (Sonnet, or Haiku at
+  $H=5$), P3 needs $\rho<1$ (Haiku, $H\ge10$).
+- **The $\lambda=0$ tie in Prop. 1 is a real degenerate case**, not hidden.
+- **Outside these premises the family is silent** (e.g. a tier that is both
+  recall $<1$ *and* faces a checker with $\phi>0$ simultaneously is not one of
+  the three — no measured cell exhibits it, so it is not claimed).
