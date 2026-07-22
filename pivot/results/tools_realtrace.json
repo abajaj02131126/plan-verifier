@@ -1,0 +1,28 @@
+{
+  "subset": "tools/real-trace",
+  "apis_modeled": [
+    "Stripe",
+    "SendGrid",
+    "GitHub",
+    "Slack",
+    "Google Calendar"
+  ],
+  "n_real_trace_problems": 8,
+  "n_records": 32,
+  "oracle_cross_check_agreement": "32/32",
+  "per_flaw_type_recall": {
+    "goal_incompleteness": {
+      "recall": 1.0,
+      "support": 8
+    },
+    "hallucinated_action": {
+      "recall": 1.0,
+      "support": 8
+    },
+    "inconsistency": {
+      "recall": 1.0,
+      "support": 8
+    }
+  },
+  "named_limitation": "no typed return values: API return ids modeled as boolean prerequisite facts (same simplification as the synthetic Tools domain); value-level errors not captured."
+}
