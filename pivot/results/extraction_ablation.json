@@ -1,0 +1,176 @@
+{
+  "regime_prose": {
+    "per_domain": {
+      "blocksworld": {
+        "step_accuracy": 0.9475,
+        "matched": 595,
+        "total": 628
+      },
+      "logistics": {
+        "step_accuracy": 0.9388,
+        "matched": 445,
+        "total": 474
+      },
+      "tools": {
+        "step_accuracy": 0.8784,
+        "matched": 556,
+        "total": 633
+      }
+    },
+    "pooled_step_accuracy": 0.9199,
+    "pooled_matched": 1596,
+    "pooled_total": 1735,
+    "hyphen_mangling_by_domain": {
+      "blocksworld": {
+        "hyphen_arg_mismatches": 0,
+        "same_action_arg_mismatches": 26,
+        "fraction": 0.0
+      },
+      "logistics": {
+        "hyphen_arg_mismatches": 7,
+        "same_action_arg_mismatches": 24,
+        "fraction": 0.292
+      },
+      "tools": {
+        "hyphen_arg_mismatches": 50,
+        "same_action_arg_mismatches": 60,
+        "fraction": 0.833
+      }
+    },
+    "mismatch_examples": [
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "unstack",
+          [
+            "b3",
+            "b2"
+          ]
+        ],
+        "ext": [
+          "unstack",
+          [
+            "block 3",
+            "block 2"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "put-down",
+          [
+            "b3"
+          ]
+        ],
+        "ext": [
+          "put-down",
+          [
+            "block 3"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "pick-up",
+          [
+            "b2"
+          ]
+        ],
+        "ext": [
+          "pick-up",
+          [
+            "block 2"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "stack",
+          [
+            "b2",
+            "b1"
+          ]
+        ],
+        "ext": [
+          "stack",
+          [
+            "block 2",
+            "block 1"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "stack",
+          [
+            "b3",
+            "b1"
+          ]
+        ],
+        "ext": [
+          "pick-up",
+          [
+            "b3"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "unstack",
+          [
+            "b3",
+            "b4"
+          ]
+        ],
+        "ext": [
+          "unstack",
+          [
+            "block 3",
+            "block 4"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "put-down",
+          [
+            "b3"
+          ]
+        ],
+        "ext": [
+          "put-down",
+          [
+            "block 3"
+          ]
+        ]
+      },
+      {
+        "domain": "blocksworld",
+        "ref": [
+          "unstack",
+          [
+            "b4",
+            "b2"
+          ]
+        ],
+        "ext": [
+          "unstack",
+          [
+            "block 4",
+            "block 2"
+          ]
+        ]
+      }
+    ]
+  },
+  "regime_constrained": {
+    "note": "In the constrained 'Step N: action(args)' regime the extractor operates on rigid syntax; the paper's verdict-level result already shows this regime is lossless (240/240 faithful, Sec. prose-regime). Per-step LLM extraction was not separately logged for the constrained originals; the rule parser (the reference) achieves 100% by construction there. No new API calls were spent to restate that."
+  },
+  "real_domains_note": "ALFWorld and the real-trace Tools subset used deterministic flaw injection (not LLM prose generation), because ALFWorld's encoded object IDs make faithful LLM extraction unreliable; step-level LLM-extraction accuracy is therefore not reported for the real domains. Disclosed, not silently omitted."
+}
