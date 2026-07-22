@@ -20,8 +20,8 @@
 /TemplateVersion (2027.1)
 }
 
-\title{Verify Before You Execute: When Sound Checking Beats\\
-LLM Judging for Pre-Execution Plan Verification}
+\title{Verify Before You Execute: A Decision-Theoretic Account of\\
+When Sound Checking Beats LLM Judging for Plan Verification}
 \author{Ari Bajaj}
 \affiliations{Illinois Mathematics and Science Academy\\
 abajaj1@imsa.edu}
@@ -116,14 +116,20 @@ empirically this holds across the whole (stakes, cost-weight) grid at every
 horizon $\ge 10$, while at 3--8 steps a cheap accurate judge can win because
 extraction noise gives the checker a small false-reject rate---a horizon-
 and cost-dependent boundary we map rather than assert. (4)~A generality
-test: a tool-use domain (auth scopes, prerequisite calls, quotas, spend
-budgets) ran through the entire pipeline with \emph{zero} code changes.
-(5)~A tier-independent deployment argument: a taxonomy of silent
-guardrail-collapse modes---including a fail-open judge that accepted 100\%
-of flawed plans while appearing to run---to which the checker is
-structurally immune. (6)~A negative result reported as such: a learned
-trust layer over the checker's parse was inert under \emph{two} independent
-calibration methods at our data scale, for a diagnosable reason.
+test: a self-authored tool-use domain (auth scopes, prerequisite calls,
+quotas, spend budgets) ran through the entire pipeline with \emph{zero} code
+changes. (5)~\emph{Real-data validation}, distinct from (4): the pipeline is
+applied to real tasks from the ALFWorld benchmark (65\% of sampled ALFRED
+trials translate onto the schema via a disclosed adapter, with the
+independent-oracle cross-check holding on every translated task---206/206),
+and to five real public APIs (Stripe, GitHub, and others) encoded from their
+actual OAuth scopes and prerequisite chains; the translation-failure causes
+are reported, not curated. (6)~A tier-independent deployment argument: a
+taxonomy of silent guardrail-collapse modes---including a fail-open judge
+that accepted 100\% of flawed plans while appearing to run---to which the
+checker is structurally immune. (7)~A negative result reported as such: a
+learned trust layer over the checker's parse was inert under \emph{two}
+independent calibration methods at our data scale, for a diagnosable reason.
 
 \section{Related Work}
 
@@ -700,6 +706,16 @@ later calls consume, and the DSL---lacking typed return values---models them
 as boolean prerequisite facts, so value-level errors are out of scope.
 
 \section{Limitations}
+
+\textbf{Scope of the real-benchmark validation.} The decision-theoretic and
+horizon-degradation experiments---the cost-optimality grid, the propositions,
+and the Sonnet-5 vs.\ Haiku comparison---were run \emph{only} on the
+synthetic domains. The ALFWorld and real-API results demonstrate translation
+feasibility and oracle-agreement soundness on real tasks; they are
+\emph{not} a replication of the cost-optimality or judge-comparison findings
+on real data. ``Validated on ALFWorld'' should be read as the
+soundness/translation claim it is, not as confirmation of the whole
+pipeline story.
 
 All numbers are dev-scale: 360 short-horizon records (72-record test
 split, 13 negative trust labels) plus 12 records per domain per long
