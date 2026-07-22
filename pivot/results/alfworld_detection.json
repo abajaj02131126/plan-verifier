@@ -1,0 +1,28 @@
+{
+  "domain": "alfworld",
+  "n_problems": 52,
+  "n_records": 206,
+  "n_valid_expert": 52,
+  "n_flawed_injected": 154,
+  "oracle_cross_check_agreement": "206/206",
+  "detection": {
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "per_flaw_type_recall": {
+    "goal_incompleteness": {
+      "recall": 1.0,
+      "support": 50
+    },
+    "hallucinated_action": {
+      "recall": 1.0,
+      "support": 52
+    },
+    "inconsistency": {
+      "recall": 1.0,
+      "support": 52
+    }
+  },
+  "methodology": "deterministic flaw injection (see module docstring); same labeler+checker oracle cross-check as other domains"
+}
